@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.3.0
+// @version      1.4.0
 // @description  在所有网站的密码输入框旁添加显示/隐藏、复制按钮，支持加密显示
 // @author       liuyunss
 // @match        *://*/*
@@ -20,11 +20,12 @@
   'use strict';
 
   // ─── 配置 ───
-  const DEFAULTS = { enabled: true, encrypt: false, letterShift: 7, digitShift: 3 };
+  const DEFAULTS = { enabled: true, encrypt: false, alwaysShow: false, letterShift: 7, digitShift: 3 };
   function getConfig() {
     return {
       enabled: GM_getValue('pw_enabled', DEFAULTS.enabled),
       encrypt: GM_getValue('pw_encrypt', DEFAULTS.encrypt),
+      alwaysShow: GM_getValue('pw_alwaysShow', DEFAULTS.alwaysShow),
       letterShift: GM_getValue('pw_letterShift', DEFAULTS.letterShift),
       digitShift: GM_getValue('pw_digitShift', DEFAULTS.digitShift),
     };
@@ -32,6 +33,7 @@
   function saveConfig(cfg) {
     GM_setValue('pw_enabled', cfg.enabled);
     GM_setValue('pw_encrypt', cfg.encrypt);
+    GM_setValue('pw_alwaysShow', cfg.alwaysShow);
     GM_setValue('pw_letterShift', cfg.letterShift);
     GM_setValue('pw_digitShift', cfg.digitShift);
   }
@@ -119,6 +121,10 @@
           <label class="pw-tk-switch"><input type="checkbox" id="pw-c-on" ${cfg.enabled?'checked':''}><span class="sl"></span></label>
         </div>
         <div class="pw-tk-row">
+          <div><label>始终显示密码</label><div class="hint">密码直接明文显示，去掉眼睛按钮</div></div>
+          <label class="pw-tk-switch"><input type="checkbox" id="pw-c-always" ${cfg.alwaysShow?'checked':''}><span class="sl"></span></label>
+        </div>
+        <div class="pw-tk-row">
           <div><label>加密显示</label><div class="hint">显示时混淆，复制时获取真实密码</div></div>
           <label class="pw-tk-switch"><input type="checkbox" id="pw-c-enc" ${cfg.encrypt?'checked':''}><span class="sl"></span></label>
         </div>
@@ -157,6 +163,7 @@
       saveConfig({
         enabled: mask.querySelector('#pw-c-on').checked,
         encrypt: mask.querySelector('#pw-c-enc').checked,
+        alwaysShow: mask.querySelector('#pw-c-always').checked,
         letterShift: Math.max(0, Math.min(25, parseInt(mask.querySelector('#pw-c-ls').value)||0)),
         digitShift: Math.max(0, Math.min(9, parseInt(mask.querySelector('#pw-c-ds').value)||0)),
       });
@@ -173,31 +180,41 @@
     const wrapper = input.closest('div,span,td,li,label,form,p') || input.parentNode;
     if (!wrapper || wrapper.querySelector('.pw-tk')) return;
 
+    const cfg = getConfig();
     const box = document.createElement('span');
     box.className = 'pw-tk';
     box._input = input;
     box._real = input.value;
 
-    let visible = false;
+    // 始终显示模式
+    if (cfg.alwaysShow) {
+      input.type = 'text';
+      // 不添加眼睛按钮，只保留复制和齿轮
+    }
 
-    // 眼睛
-    const tog = document.createElement('button');
-    tog.type = 'button'; tog.className = 'pw-tk-btn'; tog.title = '显示/隐藏密码';
-    tog.innerHTML = ICO.eye;
-    tog.addEventListener('click', e => {
-      e.preventDefault(); e.stopPropagation();
-      const cfg = getConfig();
-      visible = !visible;
-      if (visible) {
-        box._real = input.value;
-        if (cfg.encrypt) { input.value = encryptText(input.value, cfg); tog.innerHTML = ICO.eyeEnc; tog.classList.add('on'); }
-        else { tog.innerHTML = ICO.eyeOff; }
-        input.type = 'text';
-      } else {
-        if (cfg.encrypt && tog.classList.contains('on')) input.value = box._real;
-        input.type = 'password'; tog.innerHTML = ICO.eye; tog.classList.remove('on');
-      }
-    });
+    let visible = cfg.alwaysShow; // 始终显示模式下初始为"已显示"
+
+    // 眼睛（始终显示模式下隐藏）
+    if (!cfg.alwaysShow) {
+      const tog = document.createElement('button');
+      tog.type = 'button'; tog.className = 'pw-tk-btn'; tog.title = '显示/隐藏密码';
+      tog.innerHTML = ICO.eye;
+      tog.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        const c = getConfig();
+        visible = !visible;
+        if (visible) {
+          box._real = input.value;
+          if (c.encrypt) { input.value = encryptText(input.value, c); tog.innerHTML = ICO.eyeEnc; tog.classList.add('on'); }
+          else { tog.innerHTML = ICO.eyeOff; }
+          input.type = 'text';
+        } else {
+          if (c.encrypt && tog.classList.contains('on')) input.value = box._real;
+          input.type = 'password'; tog.innerHTML = ICO.eye; tog.classList.remove('on');
+        }
+      });
+      box.appendChild(tog);
+    }
 
     // 复制
     const cp = document.createElement('button');
