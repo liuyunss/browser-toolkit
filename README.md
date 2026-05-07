@@ -9,6 +9,7 @@
 | 脚本 | 说明 | 安装 |
 |------|------|------|
 | [show-password](./show-password/) | 🔐 密码显示与复制 | [安装脚本](https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/show-password/show-password.user.js) |
+| [stay-awake](./stay-awake/) | 🔒 页面保活，防止超时退出 | [安装脚本](https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/stay-awake/stay-awake.user.js) |
 
 ---
 
