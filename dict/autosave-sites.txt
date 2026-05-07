@@ -1,0 +1,32 @@
+# 自带保存功能的网站 - 不需要重复保存
+# 格式：每行一个域名，支持通配符，# 开头为注释
+
+# === 文档协作 ===
+docs.google.com
+sheets.google.com
+slides.google.com
+notion.so
+notion.site
+feishu.cn
+feishu.com
+kdocs.cn
+wps.cn
+shimo.im
+yuque.com
+yuque.cn
+语雀
+
+# === 项目管理 ===
+tapd.cn
+teambition.com
+tower.im
+projectify
+
+# === 表单/调查 ===
+wjx.cn
+soform.com
+huodongxing.com
+jinshuju.net
+
+# === 其他 ===
+airtable.com

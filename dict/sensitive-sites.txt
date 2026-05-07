@@ -1,0 +1,49 @@
+# 金融安全类网站 - 不存储任何表单数据
+# 格式：每行一个域名，支持通配符，# 开头为注释
+
+# === 银行 ===
+icbc.com.cn
+ccb.com
+abc.cn
+boc.cn
+cmbchina.com
+cmbchina.com.cn
+cebbank.com
+spdb.com
+pab.com.cn
+cib.com.cn
+citicbank.com
+hxb.com.cn
+psbc.com
+bankofbeijing.com.cn
+bocomm.com
+bohai.com
+
+# === 支付 ===
+alipay.com
+alipayobjects.com
+pay.weixin.qq.com
+unionpay.com
+wx.tenpay.com
+
+# === 证券 ===
+eastmoney.com
+10jqka.com.cn
+xueqiu.com
+ths123.com
+haitong.com
+guosen.com.cn
+yongtai.com
+
+# === 政务 ===
+12306.cn
+tax.gov.cn
+hrss.beijing.gov.cn
+rsj.sh.gov.cn
+si.chengdu.gov.cn
+
+# === 其他金融 ===
+rong360.com
+duowan.com
+licai.com
+caifule.com

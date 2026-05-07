@@ -10,6 +10,18 @@
 |------|------|------|
 | [show-password](./show-password/) | 🔐 密码显示与复制 | [安装脚本](https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/show-password/show-password.user.js) |
 | [stay-awake](./stay-awake/) | 🔒 页面保活，防止超时退出 | [安装脚本](https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/stay-awake/stay-awake.user.js) |
+| form-save | 💾 表单自动保存与恢复 | 开发中... |
+
+---
+
+### 字典（dict/）
+
+共享的排除列表，多个脚本引用：
+
+| 文件 | 说明 |
+|------|------|
+| [sensitive-sites.txt](./dict/sensitive-sites.txt) | 金融安全类网站（银行、支付、政务） |
+| [autosave-sites.txt](./dict/autosave-sites.txt) | 自带保存功能的网站（文档、笔记等） |
 
 ---
 
@@ -26,14 +38,11 @@
 ```
 browser-toolkit/
 ├── README.md
-├── show-password/
-│   ├── show-password.user.js    # 脚本主文件
-│   ├── docs/                    # 文档（Greasyfork 描述等）
-│   └── assets/                  # 图标资源
-└── [future-script]/
-    ├── [script].user.js
-    ├── docs/
-    └── assets/
+├── dict/                     # 共享字典（排除列表等）
+├── show-password/            # 密码显示脚本
+├── stay-awake/               # 页面保活脚本
+├── form-save/                # 表单保存脚本（开发中）
+└── plans/                    # 设计文档
 ```
 
 ### License
