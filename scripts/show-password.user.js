@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.5.1
+// @version      1.6.0
 // @description  在所有网站的密码输入框旁添加显示/隐藏、复制按钮，支持加密显示
 // @author       liuyunss
 // @match        *://*/*
@@ -45,6 +45,7 @@
     hide: `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
     enc:  `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="4" y1="4" x2="20" y2="20" stroke-width="1.5"/></svg>`,
     copy: `<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+    gear: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   };
 
   /* ── 样式 ── */
@@ -73,116 +74,87 @@
     clearTimeout(_t._x); _t._x = setTimeout(() => _t.classList.remove('show'), 1500);
   }
 
-  /* ── MutationObserver 控制 ── */
-  let _obs;
-  let _obsPaused = false;
-  function startObserver() {
-    _obs = new MutationObserver(() => {
-      if (_obsPaused) return;
-      clearTimeout(_st); _st = setTimeout(scan, 300);
-    });
-    _obs.observe(document.documentElement, { childList: true, subtree: true });
-  }
+  /* ── 设置弹窗（重入锁 + 纯 DOM 构建）─── */
+  let _opening = false;
 
-  /* ── 设置弹窗（纯 DOM 构建，不用 innerHTML）─── */
   function openSettings() {
-    closeSettings();
-    _obsPaused = true; // 暂停 Observer
+    if (_opening) return;
+    _opening = true;
+
+    // 先关闭已有的
+    const old = document.getElementById('pw-tk-settings');
+    if (old) old.remove();
+    _obsPaused = true;
+
     const c = cfg();
 
-    // 遮罩
+    // 遮罩（inline style 防覆盖）
     const mask = document.createElement('div');
     mask.id = 'pw-tk-settings';
-    Object.assign(mask.style, {
-      position: 'fixed', top: '0', left: '0', right: '0', bottom: '0',
-      background: 'rgba(0,0,0,0.35)', zIndex: '999998',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    });
+    mask.setAttribute('style', 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;background:rgba(0,0,0,0.35)!important;z-index:999998!important;display:flex!important;align-items:center;justify-content:center!important;');
 
     // 面板
     const panel = document.createElement('div');
-    Object.assign(panel.style, {
-      background: '#fff', borderRadius: '12px', padding: '24px', width: '340px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-      font: '14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
-      color: '#333',
-    });
+    panel.setAttribute('style', 'background:#fff;border-radius:12px;padding:24px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#333;max-height:90vh;overflow-y:auto;');
+    panel.addEventListener('click', e => e.stopPropagation());
 
-    const h3 = document.createElement('h3');
-    h3.textContent = '🔐 密码工具设置';
-    h3.style.margin = '0 0 16px';
-    h3.style.fontSize = '16px';
-    h3.style.fontWeight = '600';
-    panel.appendChild(h3);
+    panel.innerHTML = '<h3 style="margin:0 0 16px;font-size:16px;font-weight:600">🔐 密码工具设置</h3>';
 
     // 开关行
-    function addToggle(label, hint, checked, onChange) {
+    function addToggle(label, hint, checked) {
       const row = document.createElement('div');
-      Object.assign(row.style, { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' });
+      row.setAttribute('style', 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px');
       const left = document.createElement('div');
-      const lbl = document.createElement('label');
-      lbl.textContent = label; lbl.style.fontSize = '14px';
-      const h = document.createElement('div');
-      h.textContent = hint; h.style.cssText = 'font-size:12px;color:#999;margin-top:2px';
-      left.append(lbl, h);
-      // 开关
+      left.innerHTML = `<label style="font-size:14px">${label}</label><div style="font-size:12px;color:#999;margin-top:2px">${hint}</div>`;
       const sw = document.createElement('label');
-      Object.assign(sw.style, { position: 'relative', width: '40px', height: '22px', flexShrink: '0', display: 'block' });
+      sw.setAttribute('style', 'position:relative;width:40px;height:22px;flex-shrink:0;display:block;cursor:pointer');
       const inp = document.createElement('input');
-      inp.type = 'checkbox'; inp.checked = checked;
-      inp.style.display = 'none';
-      inp.addEventListener('change', onChange);
+      inp.type = 'checkbox'; inp.checked = checked; inp.style.display = 'none';
       const sl = document.createElement('span');
-      Object.assign(sl.style, { position: 'absolute', inset: '0', background: checked ? '#1a73e8' : '#ccc', borderRadius: '22px', cursor: 'pointer', transition: 'background .2s' });
       const dot = document.createElement('span');
-      Object.assign(dot.style, { position: 'absolute', width: '18px', height: '18px', left: checked ? '20px' : '2px', top: '2px', background: '#fff', borderRadius: '50%', transition: 'transform .2s' });
-      inp.addEventListener('change', () => {
+      function upd() {
         sl.style.background = inp.checked ? '#1a73e8' : '#ccc';
         dot.style.left = inp.checked ? '20px' : '2px';
-      });
-      sl.append(dot);
-      sw.append(inp, sl);
+      }
+      sl.setAttribute('style', `position:absolute;inset:0;background:${checked?'#1a73e8':'#ccc'};border-radius:22px;transition:background .2s`);
+      dot.setAttribute('style', `position:absolute;width:18px;height:18px;left:${checked?'20px':'2px'};top:2px;background:#fff;border-radius:50%;transition:left .2s`);
+      inp.addEventListener('change', upd);
+      sl.addEventListener('click', () => { inp.checked = !inp.checked; inp.dispatchEvent(new Event('change')); });
+      sw.append(inp, sl, dot);
       row.append(left, sw);
       panel.appendChild(row);
       return inp;
     }
 
-    const inpOn = addToggle('启用脚本', '关闭后密码框不再显示按钮', c.enabled, () => {});
-    const inpAl = addToggle('始终显示密码', '密码直接明文，去掉眼睛按钮', c.alwaysShow, () => {});
-    const inpEn = addToggle('加密显示', '显示时混淆，复制时获取真实密码', c.encrypt, () => {});
+    const inpOn  = addToggle('启用脚本', '关闭后密码框不再显示按钮', c.enabled);
+    const inpAl  = addToggle('始终显示密码', '密码直接明文，去掉眼睛按钮', c.alwaysShow);
+    const inpEn  = addToggle('加密显示', '显示时混淆，复制时获取真实密码', c.encrypt);
 
-    // 数字输入行
-    function addNumber(label, hint, min, max, val) {
+    // 数字输入
+    function addNum(label, hint, min, max, val) {
       const row = document.createElement('div');
-      Object.assign(row.style, { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' });
+      row.setAttribute('style', 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px');
       const left = document.createElement('div');
-      const lbl = document.createElement('label');
-      lbl.textContent = label; lbl.style.fontSize = '14px';
-      const h = document.createElement('div');
-      h.textContent = hint; h.style.cssText = 'font-size:12px;color:#999;margin-top:2px';
-      left.append(lbl, h);
+      left.innerHTML = `<label style="font-size:14px">${label}</label><div style="font-size:12px;color:#999;margin-top:2px">${hint}</div>`;
       const num = document.createElement('input');
       num.type = 'number'; num.min = min; num.max = max; num.value = val;
-      num.style.cssText = 'width:52px;height:30px;border:1px solid #ddd;border-radius:6px;text-align:center;font-size:14px;outline:0';
+      num.setAttribute('style', 'width:52px;height:30px;border:1px solid #ddd;border-radius:6px;text-align:center;font-size:14px;outline:0');
       row.append(left, num);
       panel.appendChild(row);
       return num;
     }
 
-    const inpLs = addNumber('字母偏移', 'A→? 偏移量 (0-25)', 0, 25, c.letterShift);
-    const inpDs = addNumber('数字偏移', '0→? 偏移量 (0-9)', 0, 9, c.digitShift);
+    const inpLs = addNum('字母偏移', 'A→? 偏移量 (0-25)', 0, 25, c.letterShift);
+    const inpDs = addNum('数字偏移', '0→? 偏移量 (0-9)', 0, 9, c.digitShift);
 
     // 预览
-    const preRow = document.createElement('div');
-    Object.assign(preRow.style, { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' });
-    const preLeft = document.createElement('div');
-    const preLbl = document.createElement('label');
-    preLbl.textContent = '预览'; preLbl.style.fontSize = '14px';
+    const preDiv = document.createElement('div');
+    preDiv.setAttribute('style', 'margin-bottom:14px');
+    preDiv.innerHTML = '<label style="font-size:14px">预览</label>';
     const preHint = document.createElement('div');
     preHint.style.cssText = 'font-size:12px;color:#999;margin-top:2px';
-    preLeft.append(preLbl, preHint);
-    preRow.appendChild(preLeft);
-    panel.appendChild(preRow);
+    preDiv.appendChild(preHint);
+    panel.appendChild(preDiv);
 
     function updPreview() {
       preHint.textContent = `MyP@ss123 → ${enc('MyP@ss123', { letterShift: +inpLs.value || 0, digitShift: +inpDs.value || 0 })}`;
@@ -191,33 +163,49 @@
     inpLs.addEventListener('input', updPreview);
     inpDs.addEventListener('input', updPreview);
 
-    // 保存按钮
+    // 保存
     const foot = document.createElement('div');
     foot.style.cssText = 'margin-top:18px;text-align:right';
     const btn = document.createElement('button');
     btn.textContent = '保存';
-    btn.style.cssText = 'padding:6px 18px;border:none;border-radius:6px;font-size:14px;cursor:pointer;background:#1a73e8;color:#fff';
-    btn.addEventListener('click', () => {
+    btn.setAttribute('style', 'padding:6px 18px;border:none;border-radius:6px;font-size:14px;cursor:pointer;background:#1a73e8;color:#fff');
+    btn.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
       saveCfg({
         enabled: inpOn.checked, encrypt: inpEn.checked, alwaysShow: inpAl.checked,
         letterShift: Math.max(0, Math.min(25, +inpLs.value || 0)),
         digitShift: Math.max(0, Math.min(9, +inpDs.value || 0)),
       });
-      closeSettings();
+      mask.remove();
+      _obsPaused = false;
+      _opening = false;
       toast('✅ 设置已保存');
     });
     foot.appendChild(btn);
     panel.appendChild(foot);
 
+    // 点击遮罩关闭
+    mask.addEventListener('click', e => {
+      if (e.target === mask) { mask.remove(); _obsPaused = false; _opening = false; }
+    });
+
     mask.appendChild(panel);
-    mask.addEventListener('click', e => { if (e.target === mask) closeSettings(); });
     document.body.appendChild(mask);
   }
 
-  function closeSettings() {
-    const el = document.getElementById('pw-tk-settings');
-    if (el) el.remove();
-    _obsPaused = false; // 恢复 Observer
+  /* ── 右下角悬浮齿轮（唯一设置入口）─── */
+  function injectFloatBtn() {
+    if (document.getElementById('pw-tk-float')) return;
+    const btn = document.createElement('button');
+    btn.id = 'pw-tk-float';
+    btn.type = 'button';
+    btn.title = '密码工具设置';
+    btn.innerHTML = SVG.gear;
+    btn.setAttribute('style', 'position:fixed!important;bottom:16px!important;right:16px!important;width:36px!important;height:36px!important;border:none!important;border-radius:50%!important;background:rgba(0,0,0,0.06)!important;cursor:pointer!important;z-index:999997!important;display:flex!important;align-items:center;justify-content:center;opacity:0.3;transition:opacity .2s,background .2s;');
+    btn.addEventListener('mouseenter', () => { btn.style.opacity = '1'; btn.style.background = 'rgba(0,0,0,0.1)'; });
+    btn.addEventListener('mouseleave', () => { btn.style.opacity = '0.3'; btn.style.background = 'rgba(0,0,0,0.06)'; });
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openSettings(); });
+    document.body.appendChild(btn);
   }
 
   /* ── 增强密码框 ── */
@@ -233,6 +221,7 @@
 
     if (c.alwaysShow) input.type = 'text';
 
+    // 眼睛（始终显示模式下不加）
     if (!c.alwaysShow) {
       let visible = false;
       const tog = document.createElement('button');
@@ -254,6 +243,7 @@
       box.appendChild(tog);
     }
 
+    // 复制
     const cp = document.createElement('button');
     cp.type = 'button'; cp.className = 'pw-tk-btn'; cp.title = '复制密码';
     cp.innerHTML = SVG.copy;
@@ -277,11 +267,20 @@
     document.querySelectorAll('input[type="password"],input[name*="pass"],input[name*="pwd"],input[autocomplete="current-password"],input[autocomplete="new-password"]').forEach(enhance);
   }
 
-  let _st;
+  let _st, _obs;
+  function startObserver() {
+    _obs = new MutationObserver(() => {
+      if (_obsPaused) return;
+      clearTimeout(_st); _st = setTimeout(scan, 300);
+    });
+    _obs.observe(document.documentElement, { childList: true, subtree: true });
+  }
+  let _obsPaused = false;
 
   /* ── 启动 ── */
   injectCSS();
   GM_registerMenuCommand('打开设置', openSettings);
   startObserver();
+  injectFloatBtn();
   if (cfg().enabled) scan();
 })();
