@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.8.1
+// @version      1.9.0
 // @description  在所有网站的密码输入框旁添加显示/隐藏、复制按钮，支持加密显示
 // @author       liuyunss
 // @match        *://*/*
@@ -27,6 +27,9 @@
     if (ch >= 'a' && ch <= 'z') return String.fromCharCode(((ch.charCodeAt(0) - 97 + ls) % 26) + 97);
     if (ch >= 'A' && ch <= 'Z') return String.fromCharCode(((ch.charCodeAt(0) - 65 + ls) % 26) + 65);
     if (ch >= '0' && ch <= '9') return String.fromCharCode(((ch.charCodeAt(0) - 48 + ds) % 10) + 48);
+    const sp = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`';
+    const i = sp.indexOf(ch);
+    if (i >= 0) return sp[(i + ls + ds) % sp.length];
     return ch;
   };
   const enc = (t, ls, ds) => t.split('').map(ch => sc(ch, ls, ds)).join('');
@@ -69,7 +72,7 @@
       <div class="r"><div><label>字母偏移</label><div class="h">A→? 偏移量 (0-25)</div></div><input type="number" class="nm" id="s-ls" min="0" max="25" value="${c.letterShift}"></div>
       <div class="r"><div><label>数字偏移</label><div class="h">0→? 偏移量 (0-9)</div></div><input type="number" class="nm" id="s-ds" min="0" max="9" value="${c.digitShift}"></div>
       <div class="r"><div><label>预览</label><div class="h" id="s-pre"></div></div></div>
-      <div class="ft"><button id="s-ok">保存</button></div>
+      <div class="ft"><button id="s-rst" style="background:#666;margin-right:8px">重置默认</button><button id="s-ok">保存</button></div>
     </div></div>`;
     const pre = sh.getElementById('s-pre'), ls = sh.getElementById('s-ls'), ds = sh.getElementById('s-ds');
     const upd = () => { pre.textContent = `MyP@ss123 → ${enc('MyP@ss123', +ls.value||0, +ds.value||0)}`; };
@@ -79,6 +82,11 @@
       e.stopPropagation();
       saveCfg({ enabled: sh.getElementById('s-on').checked, encrypt: sh.getElementById('s-en').checked, alwaysShow: sh.getElementById('s-al').checked, letterShift: Math.max(0, Math.min(25, +ls.value||0)), digitShift: Math.max(0, Math.min(9, +ds.value||0)) });
       closeSettings(); toast('✅ 设置已保存');
+    });
+    sh.getElementById('s-rst').addEventListener('click', e => {
+      e.stopPropagation();
+      saveCfg(D);
+      closeSettings(); toast('✅ 已重置为默认设置');
     });
     document.body.appendChild(host);
   }
