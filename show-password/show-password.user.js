@@ -2,7 +2,7 @@
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
 // @version      2.0.0
-// @description  在所有网站的密码输入框旁添加显示/隐藏、复制按钮，支持加密显示
+// @description  在所有网站的密码输入框旁添加显示/隐藏密码和复制密码按钮
 // @author       liuyunss
 // @match        *://*/*
 // @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/show-password/assets/icon-128.png
@@ -19,26 +19,13 @@
 (function () {
   'use strict';
 
-  const D = { enabled: true, encrypt: false, alwaysShow: false, letterShift: 7, digitShift: 3 };
-  const cfg = () => ({ enabled: GM_getValue('pw_enabled', D.enabled), encrypt: GM_getValue('pw_encrypt', D.encrypt), alwaysShow: GM_getValue('pw_alwaysShow', D.alwaysShow), letterShift: GM_getValue('pw_letterShift', D.letterShift), digitShift: GM_getValue('pw_digitShift', D.digitShift) });
+  const D = { enabled: true, alwaysShow: false };
+  const cfg = () => ({ enabled: GM_getValue('pw_enabled', D.enabled), alwaysShow: GM_getValue('pw_alwaysShow', D.alwaysShow) });
   const saveCfg = c => { for (const [k, v] of Object.entries(c)) GM_setValue('pw_' + k, v); };
-
-  const sc = (ch, ls, ds) => {
-    if (ch >= 'a' && ch <= 'z') return String.fromCharCode(((ch.charCodeAt(0) - 97 + ls) % 26) + 97);
-    if (ch >= 'A' && ch <= 'Z') return String.fromCharCode(((ch.charCodeAt(0) - 65 + ls) % 26) + 65);
-    if (ch >= '0' && ch <= '9') return String.fromCharCode(((ch.charCodeAt(0) - 48 + ds) % 10) + 48);
-    const sp = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`';
-    const i = sp.indexOf(ch);
-    if (i >= 0) return sp[(i + ls + ds) % sp.length];
-    return ch;
-  };
-  const enc = (t, ls, ds) => t.split('').map(ch => sc(ch, ls, ds)).join('');
-  const nSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
 
   const SVG = {
     eye:  `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
     hide: `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
-    enc:  `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="4" y1="4" x2="20" y2="20" stroke-width="1.5"/></svg>`,
     copy: `<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
   };
 
@@ -46,7 +33,7 @@
     if (document.getElementById('pw-tk-css')) return;
     const s = document.createElement('style');
     s.id = 'pw-tk-css';
-    s.textContent = `.pw-tk{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2;display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,.9);border-radius:4px;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,.1)}.pw-tk-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:none;border-radius:4px;background:0 0;cursor:pointer;padding:0;transition:background .15s;flex-shrink:0}.pw-tk-btn:hover{background:rgba(0,0,0,.08)}.pw-tk-btn svg{width:18px;height:18px;fill:none;stroke:#666;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.pw-tk-btn:hover svg{stroke:#333}.pw-tk-btn.on svg{stroke:#1a73e8}.pw-tk-ov{position:absolute;top:0;left:0;right:0;bottom:0;display:none;align-items:center;pointer-events:none;overflow:hidden;white-space:nowrap;color:#333;z-index:1}.pw-tk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 20px;border-radius:6px;font-size:13px;z-index:999999;opacity:0;transition:opacity .2s;pointer-events:none}.pw-tk-toast.show{opacity:1}`;
+    s.textContent = `.pw-tk{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2;display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,.9);border-radius:4px;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,.1)}.pw-tk-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:none;border-radius:4px;background:0 0;cursor:pointer;padding:0;transition:background .15s;flex-shrink:0}.pw-tk-btn:hover{background:rgba(0,0,0,.08)}.pw-tk-btn svg{width:18px;height:18px;fill:none;stroke:#666;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.pw-tk-btn:hover svg{stroke:#333}.pw-tk-btn.on svg{stroke:#1a73e8}.pw-tk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 20px;border-radius:6px;font-size:13px;z-index:999999;opacity:0;transition:opacity .2s;pointer-events:none}.pw-tk-toast.show{opacity:1}`;
     document.head.appendChild(s);
   }
 
@@ -64,24 +51,17 @@
     host.id = 'pw-tk-settings-host';
     host.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:999998;';
     const sh = host.attachShadow({ mode: 'closed' });
-    sh.innerHTML = `<style>*{box-sizing:border-box;margin:0;padding:0}.m{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#333}.p{background:#fff;border-radius:12px;padding:24px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}h3{margin:0 0 16px;font-size:16px;font-weight:600}.r{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.r label{font-size:14px}.h{font-size:12px;color:#999;margin-top:2px}.sw{position:relative;width:40px;height:22px;flex-shrink:0;cursor:pointer;display:block}.sw input{display:none}.sw .sl{position:absolute;inset:0;background:#ccc;border-radius:22px;transition:background .2s}.sw .sl::before{content:'';position:absolute;width:18px;height:18px;left:2px;top:2px;background:#fff;border-radius:50%;transition:left .2s}.sw input:checked+.sl{background:#1a73e8}.sw input:checked+.sl::before{left:20px}.nm{width:52px;height:30px;border:1px solid #ddd;border-radius:6px;text-align:center;font-size:14px;outline:0}.nm:focus{border-color:#1a73e8}.ft{margin-top:18px;text-align:right}.ft button{padding:6px 18px;border:none;border-radius:6px;font-size:14px;cursor:pointer;background:#1a73e8;color:#fff}.ft button:hover{background:#1557b0}</style>
+    sh.innerHTML = `<style>*{box-sizing:border-box;margin:0;padding:0}.m{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#333}.p{background:#fff;border-radius:12px;padding:24px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.2)}h3{margin:0 0 16px;font-size:16px;font-weight:600}.r{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.r label{font-size:14px}.h{font-size:12px;color:#999;margin-top:2px}.sw{position:relative;width:40px;height:22px;flex-shrink:0;cursor:pointer;display:block}.sw input{display:none}.sw .sl{position:absolute;inset:0;background:#ccc;border-radius:22px;transition:background .2s}.sw .sl::before{content:'';position:absolute;width:18px;height:18px;left:2px;top:2px;background:#fff;border-radius:50%;transition:left .2s}.sw input:checked+.sl{background:#1a73e8}.sw input:checked+.sl::before{left:20px}.ft{margin-top:18px;text-align:right}.ft button{padding:6px 18px;border:none;border-radius:6px;font-size:14px;cursor:pointer;background:#1a73e8;color:#fff}.ft button:hover{background:#1557b0}</style>
     <div class="m"><div class="p">
       <h3>🔐 密码工具设置</h3>
       <div class="r"><div><label>启用脚本</label><div class="h">关闭后密码框不再显示按钮</div></div><label class="sw"><input type="checkbox" id="s-on" ${c.enabled?'checked':''}><span class="sl"></span></label></div>
-      <div class="r"><div><label>始终显示密码</label><div class="h">密码直接明文，去掉眼睛按钮</div></div><label class="sw"><input type="checkbox" id="s-al" ${c.alwaysShow?'checked':''}><span class="sl"></span></label></div>
-      <div class="r"><div><label>加密显示</label><div class="h">显示时混淆，复制时获取真实密码</div></div><label class="sw"><input type="checkbox" id="s-en" ${c.encrypt?'checked':''}><span class="sl"></span></label></div>
-      <div class="r"><div><label>字母偏移</label><div class="h">A→? 偏移量 (0-25)</div></div><input type="number" class="nm" id="s-ls" min="0" max="25" value="${c.letterShift}"></div>
-      <div class="r"><div><label>数字偏移</label><div class="h">0→? 偏移量 (0-9)</div></div><input type="number" class="nm" id="s-ds" min="0" max="9" value="${c.digitShift}"></div>
-      <div class="r"><div><label>预览</label><div class="h" id="s-pre"></div></div></div>
+      <div class="r"><div><label>始终显示密码</label><div class="h">密码直接明文显示，隐藏眼睛按钮</div></div><label class="sw"><input type="checkbox" id="s-al" ${c.alwaysShow?'checked':''}><span class="sl"></span></label></div>
       <div class="ft"><button id="s-rst" style="background:#666;margin-right:8px">重置默认</button><button id="s-ok">保存</button></div>
     </div></div>`;
-    const pre = sh.getElementById('s-pre'), ls = sh.getElementById('s-ls'), ds = sh.getElementById('s-ds');
-    const upd = () => { pre.textContent = `MyP@ss123 → ${enc('MyP@ss123', +ls.value||0, +ds.value||0)}`; };
-    upd(); ls.addEventListener('input', upd); ds.addEventListener('input', upd);
     sh.querySelector('.m').addEventListener('click', e => { if (e.target.classList.contains('m')) closeSettings(); });
     sh.getElementById('s-ok').addEventListener('click', e => {
       e.stopPropagation();
-      saveCfg({ enabled: sh.getElementById('s-on').checked, encrypt: sh.getElementById('s-en').checked, alwaysShow: sh.getElementById('s-al').checked, letterShift: Math.max(0, Math.min(25, +ls.value||0)), digitShift: Math.max(0, Math.min(9, +ds.value||0)) });
+      saveCfg({ enabled: sh.getElementById('s-on').checked, alwaysShow: sh.getElementById('s-al').checked });
       closeSettings(); toast('✅ 设置已保存');
     });
     sh.getElementById('s-rst').addEventListener('click', e => {
@@ -95,33 +75,6 @@
 
   GM_registerMenuCommand('打开设置', openSettings);
 
-  /* ---------- 浮层遮罩：input.value 永远是真实密码，浮层显示乱码 ---------- */
-
-  function createOv(w, input) {
-    const ov = document.createElement('div');
-    ov.className = 'pw-tk-ov';
-    const is = getComputedStyle(input);
-    ov.style.cssText = `font:${is.font};padding:${is.padding};height:${is.height};line-height:${is.lineHeight};letter-spacing:${is.letterSpacing}`;
-    w.insertBefore(ov, w.firstChild);
-    return ov;
-  }
-  function showOv(ov, input, c) {
-    input.style.color = 'transparent';
-    input.style.webkitTextFillColor = 'transparent';
-    input.style.caretColor = 'transparent';
-    refreshOv(ov, input, c);
-  }
-  function refreshOv(ov, input, c) {
-    ov.textContent = input.value ? enc(input.value, c.letterShift, c.digitShift) : '';
-    ov.style.display = input.value ? 'flex' : 'none';
-  }
-  function hideOv(ov, input) {
-    input.style.color = '';
-    input.style.webkitTextFillColor = '';
-    input.style.caretColor = '';
-    ov.style.display = 'none';
-  }
-
   /* ---------- 主逻辑 ---------- */
 
   function enhance(input) {
@@ -132,38 +85,21 @@
     const c = cfg(), box = document.createElement('span');
     box.className = 'pw-tk';
 
-    // 浮层（加密时才创建）
-    const ov = c.encrypt ? createOv(w, input) : null;
-
     if (c.alwaysShow) {
       input.type = 'text';
-      if (c.encrypt) {
-        showOv(ov, input, c);
-        let _busy = false;
-        const reOv = () => { if (_busy) return; _busy = true; try { refreshOv(ov, input, c); } finally { _busy = false; } };
-        input.addEventListener('input', reOv);
-        input.addEventListener('change', reOv);
-      }
-    }
-
-    if (!c.alwaysShow) {
+    } else {
       let vis = false;
       const tog = document.createElement('button');
       tog.type = 'button'; tog.className = 'pw-tk-btn'; tog.title = '显示/隐藏密码'; tog.innerHTML = SVG.eye;
       tog.addEventListener('click', e => {
         e.preventDefault(); e.stopPropagation();
-        const cc = cfg(); vis = !vis;
+        vis = !vis;
         if (vis) {
           input.type = 'text';
-          if (cc.encrypt) {
-            showOv(ov, input, cc);
-            tog.innerHTML = SVG.enc; tog.classList.add('on');
-          } else {
-            tog.innerHTML = SVG.hide;
-          }
+          tog.innerHTML = SVG.hide; tog.classList.add('on');
         } else {
-          if (cc.encrypt) hideOv(ov, input);
-          input.type = 'password'; tog.innerHTML = SVG.eye; tog.classList.remove('on');
+          input.type = 'password';
+          tog.innerHTML = SVG.eye; tog.classList.remove('on');
         }
       });
       box.appendChild(tog);
