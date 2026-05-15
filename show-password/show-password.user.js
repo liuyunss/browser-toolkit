@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.9.0
+// @version      1.9.2
 // @description  在所有网站的密码输入框旁添加显示/隐藏、复制按钮，支持加密显示
 // @author       liuyunss
 // @match        *://*/*
@@ -108,7 +108,7 @@
         const doEnc = () => { box._real = input.value; nSet.call(input, enc(input.value, c.letterShift, c.digitShift)); };
         doEnc(); box._enc = 1;
         let _busy = false;
-        const reEnc = () => { if (_busy) return; _busy = true; const cur = input.value; if (cur && cur !== box._real && cur !== enc(box._real, c.letterShift, c.digitShift)) { box._real = cur; nSet.call(input, enc(cur, c.letterShift, c.digitShift)); } _busy = false; };
+        const reEnc = () => { if (_busy) return; _busy = true; try { const cur = input.value; if (cur && cur !== box._real && cur !== enc(box._real, c.letterShift, c.digitShift)) { box._real = cur; nSet.call(input, enc(cur, c.letterShift, c.digitShift)); } } finally { _busy = false; } };
         input.addEventListener('input', reEnc);
         input.addEventListener('change', reEnc);
       }
@@ -122,11 +122,14 @@
         const cc = cfg(); vis = !vis;
         if (vis) {
           box._real = input.value;
+          input.type = 'text';
           if (cc.encrypt) { nSet.call(input, enc(box._real, cc.letterShift, cc.digitShift)); input.dispatchEvent(new Event('input',{bubbles:true})); tog.innerHTML = SVG.enc; tog.classList.add('on'); }
           else tog.innerHTML = SVG.hide;
-          input.type = 'text';
         } else {
-          if (cc.encrypt && tog.classList.contains('on')) { nSet.call(input, box._real); input.dispatchEvent(new Event('input',{bubbles:true})); }
+          if (cc.encrypt && tog.classList.contains('on')) {
+            if (input.value !== enc(box._real, cc.letterShift, cc.digitShift)) box._real = input.value;
+            nSet.call(input, box._real); input.dispatchEvent(new Event('input',{bubbles:true}));
+          }
           input.type = 'password'; tog.innerHTML = SVG.eye; tog.classList.remove('on');
         }
       });
