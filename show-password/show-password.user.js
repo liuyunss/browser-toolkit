@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.9.2
+// @version      1.9.3
 // @description  在所有网站的密码输入框旁添加显示/隐藏、复制按钮，支持加密显示
 // @author       liuyunss
 // @match        *://*/*
