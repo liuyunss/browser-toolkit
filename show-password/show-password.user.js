@@ -33,6 +33,7 @@
     return ch;
   };
   const enc = (t, ls, ds) => t.split('').map(ch => sc(ch, ls, ds)).join('');
+  const nSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
 
   const SVG = {
     eye:  `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
@@ -96,7 +97,6 @@
 
   function enhance(input) {
     if (input.dataset.pwTk) return;
-    input.dataset.pwTk = '1';
     const w = input.closest('div,span,td,li,label,p') || input.parentNode;
     if (!w || w.querySelector('.pw-tk')) return;
     if (getComputedStyle(w).position === 'static') w.style.position = 'relative';
@@ -104,7 +104,14 @@
     box.className = 'pw-tk';
     if (c.alwaysShow) {
       input.type = 'text';
-      if (c.encrypt) { box._real = input.value; input.value = enc(input.value, c.letterShift, c.digitShift); box._enc = 1; }
+      if (c.encrypt) {
+        const doEnc = () => { box._real = input.value; nSet.call(input, enc(input.value, c.letterShift, c.digitShift)); };
+        doEnc(); box._enc = 1;
+        let _busy = false;
+        const reEnc = () => { if (_busy) return; _busy = true; const cur = input.value; if (cur && cur !== box._real && cur !== enc(box._real, c.letterShift, c.digitShift)) { box._real = cur; nSet.call(input, enc(cur, c.letterShift, c.digitShift)); } _busy = false; };
+        input.addEventListener('input', reEnc);
+        input.addEventListener('change', reEnc);
+      }
     }
     if (!c.alwaysShow) {
       let vis = false;
@@ -115,11 +122,11 @@
         const cc = cfg(); vis = !vis;
         if (vis) {
           box._real = input.value;
-          if (cc.encrypt) { input.value = enc(input.value, cc.letterShift, cc.digitShift); tog.innerHTML = SVG.enc; tog.classList.add('on'); }
+          if (cc.encrypt) { nSet.call(input, enc(box._real, cc.letterShift, cc.digitShift)); input.dispatchEvent(new Event('input',{bubbles:true})); tog.innerHTML = SVG.enc; tog.classList.add('on'); }
           else tog.innerHTML = SVG.hide;
           input.type = 'text';
         } else {
-          if (cc.encrypt && tog.classList.contains('on')) input.value = box._real;
+          if (cc.encrypt && tog.classList.contains('on')) { nSet.call(input, box._real); input.dispatchEvent(new Event('input',{bubbles:true})); }
           input.type = 'password'; tog.innerHTML = SVG.eye; tog.classList.remove('on');
         }
       });
@@ -137,11 +144,12 @@
     });
     box.appendChild(cp);
     w.appendChild(box);
+    input.dataset.pwTk = '1';
   }
 
   function scan() {
     if (!cfg().enabled) return;
-    document.querySelectorAll('input[type="password"],input[name*="pass"],input[name*="pwd"],input[autocomplete="current-password"],input[autocomplete="new-password"]').forEach(enhance);
+    document.querySelectorAll('input[type="password"],input[name*="pass"],input[name*="pwd"],input[autocomplete="current-password"],input[autocomplete="new-password"],input[aria-label*="密码"],input[placeholder*="密码"],input[placeholder*="password" i],input[id*="pass"]').forEach(enhance);
   }
   let _st;
   new MutationObserver(() => { clearTimeout(_st); _st = setTimeout(scan, 300); }).observe(document.documentElement, { childList: true, subtree: true });
