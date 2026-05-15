@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.9.3
+// @version      2.0.0
 // @description  在所有网站的密码输入框旁添加显示/隐藏、复制按钮，支持加密显示
 // @author       liuyunss
 // @match        *://*/*
@@ -46,7 +46,7 @@
     if (document.getElementById('pw-tk-css')) return;
     const s = document.createElement('style');
     s.id = 'pw-tk-css';
-    s.textContent = `.pw-tk{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:1;display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,.9);border-radius:4px;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,.1)}.pw-tk-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:none;border-radius:4px;background:0 0;cursor:pointer;padding:0;transition:background .15s;flex-shrink:0}.pw-tk-btn:hover{background:rgba(0,0,0,.08)}.pw-tk-btn svg{width:18px;height:18px;fill:none;stroke:#666;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.pw-tk-btn:hover svg{stroke:#333}.pw-tk-btn.on svg{stroke:#1a73e8}.pw-tk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 20px;border-radius:6px;font-size:13px;z-index:999999;opacity:0;transition:opacity .2s;pointer-events:none}.pw-tk-toast.show{opacity:1}`;
+    s.textContent = `.pw-tk{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2;display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,.9);border-radius:4px;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,.1)}.pw-tk-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:none;border-radius:4px;background:0 0;cursor:pointer;padding:0;transition:background .15s;flex-shrink:0}.pw-tk-btn:hover{background:rgba(0,0,0,.08)}.pw-tk-btn svg{width:18px;height:18px;fill:none;stroke:#666;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.pw-tk-btn:hover svg{stroke:#333}.pw-tk-btn.on svg{stroke:#1a73e8}.pw-tk-ov{position:absolute;top:0;left:0;right:0;bottom:0;display:none;align-items:center;pointer-events:none;overflow:hidden;white-space:nowrap;color:#333;z-index:1}.pw-tk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 20px;border-radius:6px;font-size:13px;z-index:999999;opacity:0;transition:opacity .2s;pointer-events:none}.pw-tk-toast.show{opacity:1}`;
     document.head.appendChild(s);
   }
 
@@ -95,6 +95,35 @@
 
   GM_registerMenuCommand('打开设置', openSettings);
 
+  /* ---------- 浮层遮罩：input.value 永远是真实密码，浮层显示乱码 ---------- */
+
+  function createOv(w, input) {
+    const ov = document.createElement('div');
+    ov.className = 'pw-tk-ov';
+    const is = getComputedStyle(input);
+    ov.style.cssText = `font:${is.font};padding:${is.padding};height:${is.height};line-height:${is.lineHeight};letter-spacing:${is.letterSpacing}`;
+    w.insertBefore(ov, w.firstChild);
+    return ov;
+  }
+  function showOv(ov, input, c) {
+    input.style.color = 'transparent';
+    input.style.webkitTextFillColor = 'transparent';
+    input.style.caretColor = 'transparent';
+    refreshOv(ov, input, c);
+  }
+  function refreshOv(ov, input, c) {
+    ov.textContent = input.value ? enc(input.value, c.letterShift, c.digitShift) : '';
+    ov.style.display = input.value ? 'flex' : 'none';
+  }
+  function hideOv(ov, input) {
+    input.style.color = '';
+    input.style.webkitTextFillColor = '';
+    input.style.caretColor = '';
+    ov.style.display = 'none';
+  }
+
+  /* ---------- 主逻辑 ---------- */
+
   function enhance(input) {
     if (input.dataset.pwTk) return;
     const w = input.closest('div,span,td,li,label,p') || input.parentNode;
@@ -102,17 +131,21 @@
     if (getComputedStyle(w).position === 'static') w.style.position = 'relative';
     const c = cfg(), box = document.createElement('span');
     box.className = 'pw-tk';
+
+    // 浮层（加密时才创建）
+    const ov = c.encrypt ? createOv(w, input) : null;
+
     if (c.alwaysShow) {
       input.type = 'text';
       if (c.encrypt) {
-        const doEnc = () => { box._real = input.value; nSet.call(input, enc(input.value, c.letterShift, c.digitShift)); };
-        doEnc(); box._enc = 1;
+        showOv(ov, input, c);
         let _busy = false;
-        const reEnc = () => { if (_busy) return; _busy = true; try { const cur = input.value; if (cur && cur !== box._real && cur !== enc(box._real, c.letterShift, c.digitShift)) { box._real = cur; nSet.call(input, enc(cur, c.letterShift, c.digitShift)); } } finally { _busy = false; } };
-        input.addEventListener('input', reEnc);
-        input.addEventListener('change', reEnc);
+        const reOv = () => { if (_busy) return; _busy = true; try { refreshOv(ov, input, c); } finally { _busy = false; } };
+        input.addEventListener('input', reOv);
+        input.addEventListener('change', reOv);
       }
     }
+
     if (!c.alwaysShow) {
       let vis = false;
       const tog = document.createElement('button');
@@ -121,25 +154,26 @@
         e.preventDefault(); e.stopPropagation();
         const cc = cfg(); vis = !vis;
         if (vis) {
-          box._real = input.value;
           input.type = 'text';
-          if (cc.encrypt) { nSet.call(input, enc(box._real, cc.letterShift, cc.digitShift)); input.dispatchEvent(new Event('input',{bubbles:true})); tog.innerHTML = SVG.enc; tog.classList.add('on'); }
-          else tog.innerHTML = SVG.hide;
-        } else {
-          if (cc.encrypt && tog.classList.contains('on')) {
-            if (input.value !== enc(box._real, cc.letterShift, cc.digitShift)) box._real = input.value;
-            nSet.call(input, box._real); input.dispatchEvent(new Event('input',{bubbles:true}));
+          if (cc.encrypt) {
+            showOv(ov, input, cc);
+            tog.innerHTML = SVG.enc; tog.classList.add('on');
+          } else {
+            tog.innerHTML = SVG.hide;
           }
+        } else {
+          if (cc.encrypt) hideOv(ov, input);
           input.type = 'password'; tog.innerHTML = SVG.eye; tog.classList.remove('on');
         }
       });
       box.appendChild(tog);
     }
+
     const cp = document.createElement('button');
     cp.type = 'button'; cp.className = 'pw-tk-btn'; cp.title = '复制密码'; cp.innerHTML = SVG.copy;
     cp.addEventListener('click', e => {
       e.preventDefault(); e.stopPropagation();
-      const val = box._real || input.value;
+      const val = input.value;
       if (!val) { toast('⚠️ 输入框为空'); return; }
       if (typeof GM_setClipboard === 'function') GM_setClipboard(val, 'text');
       else navigator.clipboard.writeText(val).catch(() => {});
@@ -147,14 +181,6 @@
     });
     box.appendChild(cp);
     w.appendChild(box);
-    if (c.encrypt) {
-      const restoreReal = () => {
-        if (box._real && input.value !== box._real) { nSet.call(input, box._real); input.dispatchEvent(new Event('input',{bubbles:true})); }
-      };
-      const form = input.closest('form');
-      if (form) form.addEventListener('submit', restoreReal, true);
-      input.addEventListener('keydown', e => { if (e.key === 'Enter') restoreReal(); }, true);
-    }
     input.dataset.pwTk = '1';
   }
 
