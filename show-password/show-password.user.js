@@ -147,6 +147,14 @@
     });
     box.appendChild(cp);
     w.appendChild(box);
+    if (c.encrypt) {
+      const restoreReal = () => {
+        if (box._real && input.value !== box._real) { nSet.call(input, box._real); input.dispatchEvent(new Event('input',{bubbles:true})); }
+      };
+      const form = input.closest('form');
+      if (form) form.addEventListener('submit', restoreReal, true);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') restoreReal(); }, true);
+    }
     input.dataset.pwTk = '1';
   }
 
