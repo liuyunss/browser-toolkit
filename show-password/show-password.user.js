@@ -2,7 +2,7 @@
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
 // @version      2.0.0
-// @description  在所有网站的密码输入框旁添加显示/隐藏密码和复制密码按钮
+// @description  在所有网站的密码输入框旁添加显示/隐藏密码和复制密码按钮，支持常显明文或隐藏眼睛
 // @author       liuyunss
 // @match        *://*/*
 // @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/show-password/assets/icon-128.png
@@ -19,8 +19,12 @@
 (function () {
   'use strict';
 
-  const D = { enabled: true, alwaysShow: false };
-  const cfg = () => ({ enabled: GM_getValue('pw_enabled', D.enabled), alwaysShow: GM_getValue('pw_alwaysShow', D.alwaysShow) });
+  const D = { enabled: true, alwaysShow: false, hideEye: false };
+  const cfg = () => ({
+    enabled: GM_getValue('pw_enabled', D.enabled),
+    alwaysShow: GM_getValue('pw_alwaysShow', D.alwaysShow),
+    hideEye: GM_getValue('pw_hideEye', D.hideEye),
+  });
   const saveCfg = c => { for (const [k, v] of Object.entries(c)) GM_setValue('pw_' + k, v); };
 
   const SVG = {
@@ -56,12 +60,17 @@
       <h3>🔐 密码工具设置</h3>
       <div class="r"><div><label>启用脚本</label><div class="h">关闭后密码框不再显示按钮</div></div><label class="sw"><input type="checkbox" id="s-on" ${c.enabled?'checked':''}><span class="sl"></span></label></div>
       <div class="r"><div><label>始终显示密码</label><div class="h">密码直接明文显示，隐藏眼睛按钮</div></div><label class="sw"><input type="checkbox" id="s-al" ${c.alwaysShow?'checked':''}><span class="sl"></span></label></div>
+      <div class="r"><div><label>关闭眼睛</label><div class="h">隐藏眼睛按钮，密码保持圆点，仅复制</div></div><label class="sw"><input type="checkbox" id="s-he" ${c.hideEye?'checked':''}><span class="sl"></span></label></div>
       <div class="ft"><button id="s-rst" style="background:#666;margin-right:8px">重置默认</button><button id="s-ok">保存</button></div>
     </div></div>`;
     sh.querySelector('.m').addEventListener('click', e => { if (e.target.classList.contains('m')) closeSettings(); });
     sh.getElementById('s-ok').addEventListener('click', e => {
       e.stopPropagation();
-      saveCfg({ enabled: sh.getElementById('s-on').checked, alwaysShow: sh.getElementById('s-al').checked });
+      saveCfg({
+        enabled: sh.getElementById('s-on').checked,
+        alwaysShow: sh.getElementById('s-al').checked,
+        hideEye: sh.getElementById('s-he').checked,
+      });
       closeSettings(); toast('✅ 设置已保存');
     });
     sh.getElementById('s-rst').addEventListener('click', e => {
@@ -86,8 +95,12 @@
     box.className = 'pw-tk';
 
     if (c.alwaysShow) {
+      // 密码常显：明文 + 复制，无眼睛
       input.type = 'text';
+    } else if (c.hideEye) {
+      // 关闭眼睛：圆点 + 复制，无眼睛
     } else {
+      // 默认：眼睛切换 + 复制
       let vis = false;
       const tog = document.createElement('button');
       tog.type = 'button'; tog.className = 'pw-tk-btn'; tog.title = '显示/隐藏密码'; tog.innerHTML = SVG.eye;
