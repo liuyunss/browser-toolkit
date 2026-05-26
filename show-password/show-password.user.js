@@ -135,10 +135,12 @@
 
   function scan() {
     if (!cfg().enabled) return;
-    document.querySelectorAll('input[type="password"],input[name*="pass"],input[name*="pwd"],input[autocomplete="current-password"],input[autocomplete="new-password"],input[aria-label*="密码"],input[placeholder*="密码"],input[placeholder*="password" i],input[id*="pass"]').forEach(enhance);
+    try {
+      document.querySelectorAll('input[type="password"],input[name*="pass"],input[name*="pwd"],input[autocomplete="current-password"],input[autocomplete="new-password"],input[aria-label*="密码"],input[placeholder*="密码"],input[placeholder*="password" i],input[id*="pass"]').forEach(enhance);
+    } catch (_) {}
   }
   let _st;
-  new MutationObserver(() => { clearTimeout(_st); _st = setTimeout(scan, 300); }).observe(document.documentElement, { childList: true, subtree: true });
+  new MutationObserver(() => { clearTimeout(_st); _st = setTimeout(scan, 500); }).observe(document.body, { childList: true, subtree: true });
 
   injectCSS(); scan();
 })();
