@@ -1,24 +1,29 @@
 // ==UserScript==
 // @name         🍪 Cookie 一键复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      3.0.0
-// @description  从 Tampermonkey 菜单一键复制当前网站所有 Cookie
+// @version      2.0.0
+// @description  复制当前网站的完整 Cookie（含 HttpOnly），拦截 XHR 请求获取请求头中的 Cookie
 // @author       liuyunss
 // @match        *://*/*
 // @noframes
 // @grant        GM_setClipboard
 // @grant        GM_registerMenuCommand
-// @grant        GM_notification
-// @run-at       document-idle
+// @run-at       document-start
 // @updateURL    https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/cookie-clip/cookie-clip.user.js
 // @downloadURL  https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/cookie-clip/cookie-clip.user.js
 // @license      MIT
 // ==/UserScript==
 
+/**
+ * v2.0.0:
+ * - 从 document.cookie 改为拦截 XHR 请求，捕获请求头中的完整 Cookie（含 HttpOnly）
+ * - 只取匹配当前域名的请求，一个就够
+ * - document.cookie 作为兜底
+ */
 (function () {
   'use strict';
 
-  // 提示框样式（与 show-password 一致）
+  /* ── Toast ── */
   const CSS = `
     #ck-clip-toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -29,7 +34,6 @@
     }
     #ck-clip-toast.show { opacity: 1; }
   `;
-
   let _t;
   function toast(msg) {
     if (!_t) {
@@ -40,11 +44,77 @@
     clearTimeout(_t._x); _t._x = setTimeout(() => _t.classList.remove('show'), 1500);
   }
 
+  /* ── XHR 拦截：捕获匹配当前域名的 Cookie header ── */
+  let _capturedCookie = '';
+  const _origin = location.origin;
+
+  // 追踪每个 XHR 设置的 header
+  const _xhrHeaders = new WeakMap();
+
+  const _origSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+    if (!this._ckClipHeaders) this._ckClipHeaders = {};
+    this._ckClipHeaders[name.toLowerCase()] = value;
+    return _origSetHeader.call(this, name, value);
+  };
+
+  const _origOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (method, url) {
+    this._ckClipUrl = url;
+    this._ckClipMethod = method;
+    return _origOpen.apply(this, arguments);
+  };
+
+  const _origSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.send = function () {
+    // 只取第一个匹配的，不再覆盖
+    if (!_capturedCookie && this._ckClipHeaders && this._ckClipHeaders['cookie']) {
+      try {
+        const reqUrl = this._ckClipUrl;
+        // 匹配当前域名（相对路径 or 同源绝对路径）
+        const isSameOrigin = !reqUrl.startsWith('http') || reqUrl.startsWith(_origin);
+        if (isSameOrigin) {
+          _capturedCookie = this._ckClipHeaders['cookie'];
+        }
+      } catch (_) {}
+    }
+    return _origSend.apply(this, arguments);
+  };
+
+  /* ── 复制命令 ── */
   GM_registerMenuCommand('🍪 复制 Cookie', () => {
-    const cookie = document.cookie;
+    // 优先用拦截到的完整 Cookie，兜底用 document.cookie
+    const cookie = _capturedCookie || document.cookie;
     if (!cookie) { toast('⚠️ 当前网站没有 Cookie'); return; }
     if (typeof GM_setClipboard === 'function') GM_setClipboard(cookie, 'text');
     else navigator.clipboard.writeText(cookie).catch(() => {});
-    toast(`✅ 已复制 ${cookie.split(';').length} 个 Cookie`);
+    const count = cookie.split(';').length;
+    const source = _capturedCookie ? '请求头' : 'document.cookie（可能不含 HttpOnly）';
+    toast(`✅ 已复制 ${count} 个 Cookie（来源：${source}）`);
   });
+
+  /* ── 拦截 fetch（补充方案） ── */
+  const _origFetch = window.fetch;
+  window.fetch = function () {
+    if (!_capturedCookie) {
+      try {
+        const input = arguments[0];
+        const opts = arguments[1] || {};
+        const url = typeof input === 'string' ? input : input.url;
+        const isSameOrigin = !url.startsWith('http') || url.startsWith(_origin);
+        if (isSameOrigin && opts.headers) {
+          let cookie = '';
+          if (opts.headers instanceof Headers) {
+            cookie = opts.headers.get('Cookie') || opts.headers.get('cookie') || '';
+          } else if (typeof opts.headers === 'object') {
+            for (const [k, v] of Object.entries(opts.headers)) {
+              if (k.toLowerCase() === 'cookie') { cookie = v; break; }
+            }
+          }
+          if (cookie) _capturedCookie = cookie;
+        }
+      } catch (_) {}
+    }
+    return _origFetch.apply(this, arguments);
+  };
 })();

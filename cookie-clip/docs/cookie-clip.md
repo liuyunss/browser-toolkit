@@ -1,12 +1,14 @@
 # 🍪 Cookie 一键复制
 
-从 Tampermonkey 菜单一键复制当前网站所有 Cookie。
+从 Tampermonkey 菜单一键复制当前网站的完整 Cookie（含 HttpOnly），与 F12 Network 请求头一致。
 
 ## ✨ 功能
 
-- **一键复制** — 点击菜单即可复制当前网站所有 Cookie
+- **完整 Cookie** — 拦截 XHR/fetch 请求，获取请求头中的 Cookie（含 HttpOnly）
+- **匹配当前域名** — 只取同源请求的 Cookie，不会误抓其他域名
+- **兜底机制** — 无 XHR 请求时自动降级为 `document.cookie`
 - **数量提示** — 复制后显示复制了多少个 Cookie
-- **无 Cookie 提示** — 当前网站没有 Cookie 时给出提示
+- **来源提示** — 显示 Cookie 来源（请求头 / document.cookie）
 
 ## 📥 安装
 
@@ -21,17 +23,16 @@
 
 ## 🔒 安全
 
-- 仅复制 `document.cookie` 可见的 Cookie（不含 httpOnly）
+- 仅捕获匹配当前域名的请求 Cookie，不跨域
 - 不上传任何服务器
 - 不存储任何数据
 
 ## 📝 更新日志
 
-### v3.0.0
-- 提示框样式优化（底部居中，深色背景）
-
 ### v2.0.0
-- 添加 @noframes 防止 iframe 内重复注入
+- 从 `document.cookie` 改为拦截 XHR 请求，获取完整 Cookie（含 HttpOnly）
+- 支持 fetch 请求拦截
+- 匹配当前域名的同源请求，一个就够
 
 ### v1.0.0
 - 初始版本
