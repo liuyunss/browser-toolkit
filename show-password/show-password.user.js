@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      3.0.0
+// @version      3.1.0
 // @description  在所有网站的密码输入框旁添加显示/隐藏密码和复制密码按钮，支持鼠标悬停预览
 // @author       liuyunss
 // @match        *://*/*
@@ -17,7 +17,8 @@
 // ==/UserScript==
 
 /**
- * v3.0.0 Changes:
+ * v3.1.0 Changes:
+ * - Removed: alwaysShow mode (type change breaks many login flows)
  * - Fixed: buttons use inline-flex layout (no more absolute positioning)
  * - Fixed: no longer forces position:relative on parent elements
  * - New: mouse hover preview — hover over input to temporarily show plaintext
@@ -29,10 +30,9 @@
   'use strict';
 
   /* ── Config ── */
-  const D = { enabled: true, alwaysShow: false, hideEye: false, hoverPreview: true };
+  const D = { enabled: true, hideEye: false, hoverPreview: true };
   const cfg = () => ({
     enabled: GM_getValue('pw_enabled', D.enabled),
-    alwaysShow: GM_getValue('pw_alwaysShow', D.alwaysShow),
     hideEye: GM_getValue('pw_hideEye', D.hideEye),
     hoverPreview: GM_getValue('pw_hoverPreview', D.hoverPreview),
   });
@@ -101,7 +101,6 @@
     <div class="m"><div class="p">
       <h3>🔐 密码工具设置</h3>
       <div class="r"><div><label>启用脚本</label><div class="h">关闭后密码框不再显示按钮</div></div><label class="sw"><input type="checkbox" id="s-on" ${c.enabled?'checked':''}><span class="sl"></span></label></div>
-      <div class="r"><div><label>始终显示密码</label><div class="h">密码直接明文显示，隐藏眼睛按钮</div></div><label class="sw"><input type="checkbox" id="s-al" ${c.alwaysShow?'checked':''}><span class="sl"></span></label></div>
       <div class="r"><div><label>关闭眼睛</label><div class="h">隐藏眼睛按钮，密码保持圆点，仅复制</div></div><label class="sw"><input type="checkbox" id="s-he" ${c.hideEye?'checked':''}><span class="sl"></span></label></div>
       <div class="r"><div><label>鼠标悬停预览</label><div class="h">鼠标移入密码框时临时显示明文</div></div><label class="sw"><input type="checkbox" id="s-hp" ${c.hoverPreview?'checked':''}><span class="sl"></span></label></div>
       <div class="ft"><button id="s-rst" style="background:#666;margin-right:8px">重置默认</button><button id="s-ok">保存</button></div>
@@ -111,7 +110,6 @@
       e.stopPropagation();
       saveCfg({
         enabled: sh.getElementById('s-on').checked,
-        alwaysShow: sh.getElementById('s-al').checked,
         hideEye: sh.getElementById('s-he').checked,
         hoverPreview: sh.getElementById('s-hp').checked,
       });
@@ -142,7 +140,7 @@
     let manuallyVisible = false; // track manual toggle state for hover
 
     // --- Eye toggle (default mode only) ---
-    if (!c.alwaysShow && !c.hideEye) {
+    if (!c.hideEye) {
       let vis = false;
       const tog = document.createElement('button');
       tog.type = 'button'; tog.className = 'pw-tk-btn'; tog.title = '显示/隐藏密码'; tog.innerHTML = SVG.eye;
@@ -172,13 +170,9 @@
     });
     box.appendChild(cp);
 
-    // --- Always show mode ---
-    if (c.alwaysShow) {
-      input.type = 'text';
-    }
 
     // --- Hover preview ---
-    if (c.hoverPreview && !c.alwaysShow) {
+    if (c.hoverPreview) {
       let hoverVisible = false;
       input.addEventListener('mouseenter', () => {
         if (manuallyVisible) return; // don't interfere with manual toggle
