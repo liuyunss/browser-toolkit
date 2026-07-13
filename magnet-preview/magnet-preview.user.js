@@ -46,6 +46,9 @@
     music:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
     archive:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`,
     loader: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32"><animate attributeName="stroke-dashoffset" values="32;0" dur="1.5s" repeatCount="indefinite"/></circle></svg>`,
+    hd:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>`,
+    tv:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>`,
+    hash:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>`,
   };
 
   /* ═══════════════════════ 工具函数 ═══════════════════════ */
@@ -333,7 +336,7 @@
       <div class="mp-modal">
         <div class="mp-hd">
           <span class="mp-hd-title">磁力链接预览</span>
-          <button class="mp-btn-copy" style="display:none">Copy</button>
+          <button class="mp-btn-copy" style="display:none" title="复制链接">${SVG.copy}</button>
           <button class="mp-close" title="关闭">${SVG.close}</button>
         </div>
         <div class="mp-body">
@@ -412,10 +415,10 @@
     let infoHtml = `<div class="mp-info">
       <div class="mp-meta">`;
 
-    if (size) infoHtml += `<span>📦 ${fmtSize(size)}</span>`;
+    if (size) infoHtml += `<span class="mp-meta-item"><span class="mp-meta-icon">${SVG.hd}</span>${fmtSize(size)}</span>`;
     if (type && type !== 'unknown') infoHtml += `<span class="mp-meta-tag">${esc(type)}</span>`;
-    if (count) infoHtml += `<span>📄 ${count} 个文件</span>`;
-    if (sources.length) infoHtml += `<span class="mp-sources">via ${sources.join(' + ')}</span>`;
+    if (count) infoHtml += `<span class="mp-meta-item"><span class="mp-meta-icon">${SVG.file}</span>${count} 个文件</span>`;
+    if (sources.length) infoHtml += `<span class="mp-sources">${SVG.hash}${sources.join(' + ')}</span>`;
 
     infoHtml += `</div></div>`;
 
@@ -561,11 +564,19 @@
       margin-bottom: 16px; border: 1px solid #f1f5f9;
     }
     .mp-meta { display: flex; gap: 12px; font-size: 12px; color: #64748b; flex-wrap: wrap; align-items: center; }
+    .mp-meta-item { display: flex; align-items: center; gap: 5px; }
+    .mp-meta-icon { width: 14px; height: 14px; color: #94a3b8; display: flex; flex-shrink: 0; }
+    .mp-meta-icon svg { width: 100%; height: 100%; }
     .mp-meta-tag {
       background: #ede9fe; color: #7c3aed; padding: 1px 8px;
       border-radius: 10px; font-size: 11px; font-weight: 500;
     }
-    .mp-sources { font-size: 11px; color: #94a3b8; }
+    .mp-sources {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #eff6ff; color: #2563eb; padding: 1px 8px;
+      border-radius: 10px; font-size: 11px; font-weight: 500;
+    }
+    .mp-sources svg { width: 12px; height: 12px; }
 
     /* ── 文件列表 ── */
     .mp-files-section { margin-bottom: 16px; }
@@ -621,14 +632,15 @@
     }
     .mp-link-text.show { display: block; }
 
-    /* ── Copy 按钮（header 右侧） ── */
+    /* ── Copy 按钮（header 右侧图标） ── */
     .mp-btn-copy {
-      padding: 6px 16px; border: none; border-radius: 6px;
-      cursor: pointer; font-size: 12px; font-weight: 500;
-      background: #2563eb; color: #fff;
-      transition: background .15s;
+      width: 32px; height: 32px; border: none; background: none;
+      color: #94a3b8; cursor: pointer; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s; padding: 0;
     }
-    .mp-btn-copy:hover { background: #1d4ed8; }
+    .mp-btn-copy svg { width: 18px; height: 18px; }
+    .mp-btn-copy:hover { background: #eff6ff; color: #2563eb; }
 
     /* ── Toast ── */
     .mp-toast {
