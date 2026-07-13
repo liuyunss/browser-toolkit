@@ -344,7 +344,7 @@
         </div>
         <div class="mp-ft" style="display:none">
           <button class="mp-btn-copy">
-            <span class="mp-btn-icon">${SVG.copy}</span> 复制链接
+            <span class="mp-btn-icon">${SVG.copy}</span> Copy
           </button>
         </div>
       </div>`;
@@ -483,35 +483,35 @@
   GM_addStyle(`
     /* ── 磁力链接高亮 ── */
     a[href^="magnet:"], .mp-highlight {
-      color: #a78bfa !important;
-      background: rgba(167, 139, 250, 0.08) !important;
+      color: #7c3aed !important;
+      background: rgba(124, 58, 237, 0.06) !important;
       padding: 1px 5px !important;
       border-radius: 4px !important;
-      border: 1px solid rgba(167, 139, 250, 0.25) !important;
+      border: 1px solid rgba(124, 58, 237, 0.2) !important;
       text-decoration: none !important;
       font-weight: 500 !important;
       cursor: pointer !important;
       transition: all 0.15s ease !important;
     }
     a[href^="magnet:"]:hover, .mp-highlight:hover {
-      background: rgba(167, 139, 250, 0.16) !important;
-      border-color: rgba(167, 139, 250, 0.45) !important;
+      background: rgba(124, 58, 237, 0.12) !important;
+      border-color: rgba(124, 58, 237, 0.4) !important;
     }
 
     /* ── input 旁的预览按钮 ── */
     .mp-input-btn {
       display: inline-flex; align-items: center; justify-content: center;
       width: 22px; height: 22px; margin-left: 5px;
-      background: #a78bfa; color: #fff; border-radius: 4px;
+      background: #7c3aed; color: #fff; border-radius: 4px;
       font-size: 11px; font-weight: 700; cursor: pointer;
       vertical-align: middle; user-select: none; transition: opacity 0.15s;
     }
-    .mp-input-btn:hover { opacity: 0.8; }
+    .mp-input-btn:hover { opacity: 0.85; }
 
     /* ── 弹窗遮罩 ── */
     .mp-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.65);
+      background: rgba(0,0,0,0.4);
       z-index: 2147483647;
       display: flex; align-items: center; justify-content: center;
       animation: mp-fade .2s ease;
@@ -520,12 +520,12 @@
 
     /* ── 弹窗主体 ── */
     .mp-modal {
-      background: #1a1a2e;
-      border-radius: 14px; border: 1px solid #2a2a4a;
+      background: #fff;
+      border-radius: 14px; border: 1px solid #e2e8f0;
       max-width: 680px; width: 92vw; max-height: 86vh;
       display: flex; flex-direction: column;
-      color: #e2e8f0;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      color: #334155;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
       animation: mp-scale .25s ease;
     }
     @keyframes mp-scale { from{transform:scale(.92);opacity:0} to{transform:scale(1);opacity:1} }
@@ -534,12 +534,12 @@
     .mp-hd {
       display: flex; align-items: center; gap: 10px;
       padding: 16px 20px;
-      border-bottom: 1px solid #2a2a4a;
+      border-bottom: 1px solid #f1f5f9;
       flex-shrink: 0;
     }
-    .mp-hd-icon { width: 20px; height: 20px; color: #a78bfa; }
+    .mp-hd-icon { width: 20px; height: 20px; color: #7c3aed; }
     .mp-hd-icon svg { width: 100%; height: 100%; }
-    .mp-hd-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .mp-hd-title { font-size: 15px; font-weight: 600; flex: 1; color: #1e293b; }
     .mp-close {
       width: 32px; height: 32px; border: none; background: none;
       color: #94a3b8; cursor: pointer; border-radius: 8px;
@@ -547,7 +547,7 @@
       transition: all .15s; padding: 0;
     }
     .mp-close svg { width: 18px; height: 18px; }
-    .mp-close:hover { background: #2a2a4a; color: #e2e8f0; }
+    .mp-close:hover { background: #f1f5f9; color: #475569; }
 
     /* ── 内容区 ── */
     .mp-body { padding: 20px; overflow-y: auto; flex: 1; }
@@ -555,60 +555,60 @@
     /* ── 加载 ── */
     .mp-loading {
       display: flex; flex-direction: column; align-items: center;
-      padding: 48px 20px; color: #64748b; gap: 12px;
+      padding: 48px 20px; color: #94a3b8; gap: 12px;
     }
-    .mp-spinner { width: 32px; height: 32px; color: #a78bfa; }
+    .mp-spinner { width: 32px; height: 32px; color: #7c3aed; }
     .mp-spinner svg { width: 100%; height: 100%; }
     .mp-loading-text { font-size: 13px; }
 
     /* ── 空状态 ── */
-    .mp-empty { text-align: center; padding: 40px 20px; color: #ef4444; }
+    .mp-empty { text-align: center; padding: 40px 20px; color: #dc2626; }
     .mp-empty-icon { font-size: 36px; margin-bottom: 8px; font-weight: 700; }
-    .mp-empty-hint { font-size: 12px; color: #64748b; margin-top: 6px; }
+    .mp-empty-hint { font-size: 12px; color: #94a3b8; margin-top: 6px; }
 
     /* ── 信息卡片 ── */
     .mp-info {
-      padding: 14px 16px; background: #16213e; border-radius: 10px;
-      margin-bottom: 16px;
+      padding: 14px 16px; background: #f8fafc; border-radius: 10px;
+      margin-bottom: 16px; border: 1px solid #f1f5f9;
     }
     .mp-name {
-      font-size: 15px; font-weight: 600; color: #f1f5f9;
+      font-size: 15px; font-weight: 600; color: #1e293b;
       word-break: break-all; margin-bottom: 6px;
     }
-    .mp-meta { display: flex; gap: 12px; font-size: 12px; color: #94a3b8; flex-wrap: wrap; }
+    .mp-meta { display: flex; gap: 12px; font-size: 12px; color: #64748b; flex-wrap: wrap; }
     .mp-meta-tag {
-      background: #a78bfa22; color: #a78bfa; padding: 1px 8px;
-      border-radius: 10px; font-size: 11px;
+      background: #ede9fe; color: #7c3aed; padding: 1px 8px;
+      border-radius: 10px; font-size: 11px; font-weight: 500;
     }
-    .mp-sources { font-size: 11px; color: #475569; margin-top: 6px; }
+    .mp-sources { font-size: 11px; color: #94a3b8; margin-top: 6px; }
 
     /* ── 文件列表 ── */
     .mp-files-section { margin-bottom: 16px; }
     .mp-section-title {
-      font-size: 12px; color: #64748b; text-transform: uppercase;
+      font-size: 12px; color: #94a3b8; text-transform: uppercase;
       letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600;
     }
     .mp-files {
-      background: #16213e; border-radius: 10px; overflow: hidden;
-      max-height: 260px; overflow-y: auto;
+      background: #f8fafc; border-radius: 10px; overflow: hidden;
+      max-height: 260px; overflow-y: auto; border: 1px solid #f1f5f9;
     }
     .mp-file {
       display: flex; align-items: center; gap: 10px;
-      padding: 8px 14px; border-bottom: 1px solid #1e2a4a;
+      padding: 8px 14px; border-bottom: 1px solid #f1f5f9;
       font-size: 13px; transition: background .1s;
     }
     .mp-file:last-child { border-bottom: none; }
-    .mp-file:hover { background: #1e2a4a; }
-    .mp-file-icon { width: 16px; height: 16px; color: #64748b; flex-shrink: 0; }
+    .mp-file:hover { background: #f1f5f9; }
+    .mp-file-icon { width: 16px; height: 16px; color: #94a3b8; flex-shrink: 0; }
     .mp-file-icon svg { width: 100%; height: 100%; }
-    .mp-file-name { flex: 1; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .mp-file-size { color: #64748b; font-size: 11px; flex-shrink: 0; }
+    .mp-file-name { flex: 1; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mp-file-size { color: #94a3b8; font-size: 11px; flex-shrink: 0; }
 
     /* ── 截图 ── */
     .mp-shots-section { margin-bottom: 16px; }
     .mp-main-img {
       width: 100%; max-height: 340px; object-fit: contain;
-      border-radius: 10px; background: #0f0f23; margin-bottom: 10px;
+      border-radius: 10px; background: #f1f5f9; margin-bottom: 10px;
     }
     .mp-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
     .mp-thumb {
@@ -617,20 +617,20 @@
       transition: border-color .15s, opacity .15s;
     }
     .mp-thumb:hover { opacity: 0.85; }
-    .mp-thumb.active { border-color: #a78bfa; }
+    .mp-thumb.active { border-color: #7c3aed; }
 
     /* ── 磁力链接 ── */
     .mp-link-section { margin-bottom: 4px; }
     .mp-link-toggle {
-      font-size: 12px; color: #64748b; cursor: pointer;
+      font-size: 12px; color: #94a3b8; cursor: pointer;
       user-select: none; padding: 4px 0;
     }
-    .mp-link-toggle:hover { color: #94a3b8; }
-    .mp-link-toggle.open { color: #a78bfa; }
+    .mp-link-toggle:hover { color: #64748b; }
+    .mp-link-toggle.open { color: #7c3aed; }
     .mp-link-text {
       display: none; margin-top: 6px; padding: 10px 14px;
-      background: #0f0f23; border-radius: 8px;
-      font-size: 11px; color: #94a3b8; word-break: break-all;
+      background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9;
+      font-size: 11px; color: #64748b; word-break: break-all;
       font-family: monospace; line-height: 1.5;
     }
     .mp-link-text.show { display: block; }
@@ -638,28 +638,28 @@
     /* ── 底部按钮 ── */
     .mp-ft {
       display: flex; gap: 10px; padding: 14px 20px;
-      border-top: 1px solid #2a2a4a; flex-shrink: 0;
+      border-top: 1px solid #f1f5f9; flex-shrink: 0;
     }
     .mp-btn-copy {
-      flex: 1; padding: 10px 16px; border: none; border-radius: 9px;
+      flex: 1; padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 9px;
       cursor: pointer; font-size: 13px; font-weight: 500;
-      background: #2a2a4a; color: #e2e8f0;
+      background: #fff; color: #475569;
       display: flex; align-items: center; justify-content: center; gap: 6px;
-      transition: background .15s;
+      transition: all .15s;
     }
-    .mp-btn-copy:hover { background: #3a3a5a; }
+    .mp-btn-copy:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
     .mp-btn-icon { width: 16px; height: 16px; }
     .mp-btn-icon svg { width: 100%; height: 100%; }
 
     /* ── Toast ── */
     .mp-toast {
       position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-      background: #22c55e; color: #1a1a2e; padding: 10px 28px;
+      background: #22c55e; color: #fff; padding: 10px 28px;
       border-radius: 10px; font-size: 13px; font-weight: 600;
-      z-index: 2147483647;
+      z-index: 2147483647; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       animation: mp-toast-in .25s ease, mp-toast-out .25s ease 2.3s forwards;
     }
-    .mp-toast-err { background: #ef4444; color: #fff; }
+    .mp-toast-err { background: #dc2626; color: #fff; }
     @keyframes mp-toast-in { from{opacity:0;transform:translateX(-50%) translateY(8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
     @keyframes mp-toast-out { from{opacity:1} to{opacity:0} }
   `);
