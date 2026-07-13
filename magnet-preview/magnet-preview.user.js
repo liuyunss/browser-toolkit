@@ -450,14 +450,13 @@
     // ── 截图 ──
     let shotsHtml = '';
     if (screenshots.length) {
-      const thumbs = screenshots.map((src, i) =>
-        `<img class="mp-thumb${i === 0 ? ' active' : ''}" src="${esc(src)}" data-full="${esc(src)}" alt="截图 ${i + 1}">`,
+      const imgs = screenshots.map(src =>
+        `<img class="mp-shot" src="${esc(src)}" alt="预览">`
       ).join('');
 
       shotsHtml = `<div class="mp-shots-section">
-        <div class="mp-section-title">预览截图</div>
-        <img class="mp-main-img" src="${esc(screenshots[0])}" alt="预览">
-        <div class="mp-thumbs">${thumbs}</div>
+        <div class="mp-section-title">预览截图 (${screenshots.length}张)</div>
+        <div class="mp-shots-grid">${imgs}</div>
       </div>`;
     }
 
@@ -606,18 +605,20 @@
 
     /* ── 截图 ── */
     .mp-shots-section { margin-bottom: 16px; }
-    .mp-main-img {
-      width: 100%; max-height: 340px; object-fit: contain;
-      border-radius: 10px; background: #f1f5f9; margin-bottom: 10px;
+    .mp-shots-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 8px;
     }
-    .mp-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-    .mp-thumb {
-      width: 88px; height: 58px; object-fit: cover; border-radius: 7px;
-      cursor: pointer; border: 2px solid transparent; flex-shrink: 0;
-      transition: border-color .15s, opacity .15s;
+    .mp-shot {
+      width: 100%; aspect-ratio: 16/9; object-fit: cover;
+      border-radius: 8px; cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
     }
-    .mp-thumb:hover { opacity: 0.85; }
-    .mp-thumb.active { border-color: #7c3aed; }
+    .mp-shot:hover {
+      transform: scale(1.6);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      z-index: 10; position: relative;
+    }
 
     /* ── 磁力链接 ── */
     .mp-link-section { margin-bottom: 4px; }
