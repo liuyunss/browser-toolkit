@@ -12,6 +12,7 @@
 | [stay-awake](./stay-awake/) | 🔒 页面保活，防止超时退出 | [安装脚本](https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/stay-awake/stay-awake.user.js) |
 || [form-save](./form-save/) | 💾 表单自动保存与恢复 | [安装脚本](https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/form-save/form-save.user.js) |
 | [cookie-clip](./cookie-clip/) | 🍪 Cookie 一键复制 | [安装脚本](https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/cookie-clip/cookie-clip.user.js) |
+| [magnet-preview](./magnet-preview/) | 🧲 磁力链接预览 | [安装脚本](https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/magnet-preview/magnet-preview.user.js) |
 
 ---
 
@@ -43,6 +44,7 @@ browser-toolkit/
 ├── show-password/            # 密码显示脚本
 ├── stay-awake/               # 页面保活脚本
 ├── cookie-clip/              # Cookie 一键复制脚本
+├── magnet-preview/           # 磁力链接预览脚本
 ├── form-save/                # 表单保存脚本（开发中）
 └── plans/                    # 设计文档
 ```
