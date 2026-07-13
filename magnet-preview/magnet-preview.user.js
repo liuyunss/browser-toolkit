@@ -332,8 +332,8 @@
     overlay.innerHTML = `
       <div class="mp-modal">
         <div class="mp-hd">
-          <span class="mp-hd-icon">${SVG.magnet}</span>
           <span class="mp-hd-title">磁力链接预览</span>
+          <button class="mp-btn-copy" style="display:none">Copy</button>
           <button class="mp-close" title="关闭">${SVG.close}</button>
         </div>
         <div class="mp-body">
@@ -342,18 +342,13 @@
             <span class="mp-loading-text">正在获取信息…</span>
           </div>
         </div>
-        <div class="mp-ft" style="display:none">
-          <button class="mp-btn-copy">
-            <span class="mp-btn-icon">${SVG.copy}</span> Copy
-          </button>
-        </div>
       </div>`;
 
     document.body.appendChild(overlay);
 
     const bodyEl = overlay.querySelector('.mp-body');
-    const footer = overlay.querySelector('.mp-ft');
     const closeBtn = overlay.querySelector('.mp-close');
+    const copyBtn = overlay.querySelector('.mp-btn-copy');
 
     /* ── 关闭逻辑 ── */
     const close = () => overlay.remove();
@@ -380,12 +375,14 @@
           <div>未能获取种子信息</div>
           <div class="mp-empty-hint">所有数据源均不可用，请检查网络后重试</div>
         </div>`;
-        footer.style.display = 'flex';
+        copyBtn.style.display = '';
         return;
       }
 
       bodyEl.innerHTML = buildContent(data, magnet);
-      footer.style.display = 'flex';
+      // 更新标题为文件名
+      overlay.querySelector('.mp-hd-title').textContent = data.name || '磁力链接预览';
+      copyBtn.style.display = '';
 
       // 缩略图切换
       const mainImg = bodyEl.querySelector('.mp-main-img');
@@ -404,7 +401,7 @@
         <div>获取信息失败</div>
         <div class="mp-empty-hint">${err.message}</div>
       </div>`;
-      footer.style.display = 'flex';
+      copyBtn.style.display = '';
     });
   }
 
@@ -413,21 +410,14 @@
 
     // ── 信息卡片 ──
     let infoHtml = `<div class="mp-info">
-      <div class="mp-name" title="${esc(name)}">${esc(name || '未知')}</div>
       <div class="mp-meta">`;
 
-    if (size) infoHtml += `<span>${fmtSize(size)}</span>`;
+    if (size) infoHtml += `<span>📦 ${fmtSize(size)}</span>`;
     if (type && type !== 'unknown') infoHtml += `<span class="mp-meta-tag">${esc(type)}</span>`;
-    if (count) infoHtml += `<span>${count} 个文件</span>`;
+    if (count) infoHtml += `<span>📄 ${count} 个文件</span>`;
+    if (sources.length) infoHtml += `<span class="mp-sources">via ${sources.join(' + ')}</span>`;
 
-    infoHtml += `</div>`;
-
-    // 数据源标识
-    if (sources.length) {
-      infoHtml += `<div class="mp-sources">via ${sources.join(' + ')}</div>`;
-    }
-
-    infoHtml += `</div>`;
+    infoHtml += `</div></div>`;
 
     // ── 文件列表 ──
     let filesHtml = '';
@@ -567,25 +557,20 @@
 
     /* ── 信息卡片 ── */
     .mp-info {
-      padding: 14px 16px; background: #f8fafc; border-radius: 10px;
+      padding: 12px 16px; background: #f8fafc; border-radius: 10px;
       margin-bottom: 16px; border: 1px solid #f1f5f9;
     }
-    .mp-name {
-      font-size: 15px; font-weight: 600; color: #1e293b;
-      word-break: break-all; margin-bottom: 6px;
-    }
-    .mp-meta { display: flex; gap: 12px; font-size: 12px; color: #64748b; flex-wrap: wrap; }
+    .mp-meta { display: flex; gap: 12px; font-size: 12px; color: #64748b; flex-wrap: wrap; align-items: center; }
     .mp-meta-tag {
       background: #ede9fe; color: #7c3aed; padding: 1px 8px;
       border-radius: 10px; font-size: 11px; font-weight: 500;
     }
-    .mp-sources { font-size: 11px; color: #94a3b8; margin-top: 6px; }
+    .mp-sources { font-size: 11px; color: #94a3b8; }
 
     /* ── 文件列表 ── */
     .mp-files-section { margin-bottom: 16px; }
     .mp-section-title {
-      font-size: 12px; color: #94a3b8; text-transform: uppercase;
-      letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600;
+      font-size: 13px; color: #2563eb; margin-bottom: 8px; font-weight: 700;
     }
     .mp-files {
       background: #f8fafc; border-radius: 10px; overflow: hidden;
@@ -636,21 +621,14 @@
     }
     .mp-link-text.show { display: block; }
 
-    /* ── 底部按钮 ── */
-    .mp-ft {
-      display: flex; gap: 10px; padding: 14px 20px;
-      border-top: 1px solid #f1f5f9; flex-shrink: 0;
-    }
+    /* ── Copy 按钮（header 右侧） ── */
     .mp-btn-copy {
-      flex: 1; padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 9px;
-      cursor: pointer; font-size: 13px; font-weight: 500;
-      background: #fff; color: #475569;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      transition: all .15s;
+      padding: 6px 16px; border: none; border-radius: 6px;
+      cursor: pointer; font-size: 12px; font-weight: 500;
+      background: #2563eb; color: #fff;
+      transition: background .15s;
     }
-    .mp-btn-copy:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
-    .mp-btn-icon { width: 16px; height: 16px; }
-    .mp-btn-icon svg { width: 100%; height: 100%; }
+    .mp-btn-copy:hover { background: #1d4ed8; }
 
     /* ── Toast ── */
     .mp-toast {
