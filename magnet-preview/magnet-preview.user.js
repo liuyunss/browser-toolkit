@@ -490,6 +490,25 @@
       border-color: rgba(124, 58, 237, 0.4) !important;
     }
 
+    /* ── 预览按钮（链接旁） ── */
+    .mp-preview-btn {
+      display: inline-block;
+      margin-left: 6px; margin-right: 4px;
+      padding: 2px 10px;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: #fff; border-radius: 12px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      white-space: nowrap; user-select: none;
+      vertical-align: middle; line-height: 1.6;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 3px rgba(124, 58, 237, 0.25);
+    }
+    .mp-preview-btn:hover {
+      background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
+      transform: translateY(-1px);
+    }
+
     /* ── input 旁的预览按钮 ── */
     .mp-input-btn {
       display: inline-flex; align-items: center; justify-content: center;
@@ -700,6 +719,11 @@
         a.className = 'mp-highlight';
         a.target = '_blank';
         frag.appendChild(a);
+        const btn = document.createElement('span');
+        btn.className = 'mp-preview-btn';
+        btn.innerHTML = '🧲 预览';
+        btn.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); showPreview(a.href); });
+        frag.appendChild(btn);
         last = m.index + m[0].length;
       }
       if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
@@ -708,16 +732,34 @@
     }
   }
 
-  /** <a> 标签中的磁力链接 → 加高亮 class */
+  /** <a> 标签中的磁力链接 → 加高亮 class + 预览按钮 */
   function highlightLinks(root) {
     if (root.querySelectorAll) {
       root.querySelectorAll('a[href^="magnet:"]').forEach(a => {
         if (!a.classList.contains('mp-highlight')) a.classList.add('mp-highlight');
+        addPreviewBtn(a);
       });
     }
     if (root.tagName === 'A' && root.href && root.href.startsWith('magnet:')) {
       root.classList.add('mp-highlight');
+      addPreviewBtn(root);
     }
+  }
+
+  /** 在磁力链接旁插入预览按钮 */
+  function addPreviewBtn(a) {
+    if (a.dataset.mpBtnAdded) return;
+    a.dataset.mpBtnAdded = '1';
+    const btn = document.createElement('span');
+    btn.className = 'mp-preview-btn';
+    btn.innerHTML = '🧲 预览';
+    btn.title = '预览磁力链接内容';
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      showPreview(a.href);
+    });
+    a.insertAdjacentElement('afterend', btn);
   }
 
   /** input/textarea 中磁力链接旁加预览按钮 */
