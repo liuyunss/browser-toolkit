@@ -635,12 +635,12 @@
     /* ── Copy 按钮（header 右侧图标） ── */
     .mp-btn-copy {
       width: 32px; height: 32px; border: none; background: none;
-      color: #94a3b8; cursor: pointer; border-radius: 8px;
+      color: #2563eb; cursor: pointer; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       transition: all .15s; padding: 0;
     }
     .mp-btn-copy svg { width: 18px; height: 18px; }
-    .mp-btn-copy:hover { background: #eff6ff; color: #2563eb; }
+    .mp-btn-copy:hover { background: #eff6ff; color: #1d4ed8; }
 
     /* ── Toast ── */
     .mp-toast {
