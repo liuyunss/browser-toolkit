@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🍪 Cookie 一键复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      2.1.0
+// @version      2.1.1
 // @description  复制当前网站的完整 Cookie（含 HttpOnly），通过 GM_cookie 获取，document.cookie 兜底
 // @author       liuyunss
 // @match        *://*/*
@@ -16,6 +16,10 @@
 // ==/UserScript==
 
 /**
+ * v2.1.1:
+ * - 修复 GM_cookie 用 domain 查询会漏掉父域 Cookie（如 Cloudflare 的 cf_clearance，domain=.south-plus.net）的问题
+ * - 改为 url + domain 双查询合并去重，url 查询等价于浏览器实际发送的 Cookie，与请求头一致
+ *
  * v2.1.0:
  * - 改用 GM_cookie.list 获取完整 Cookie（含 HttpOnly），修复“只能复制到部分 Cookie”的问题
  *   原因：浏览器自动附加的 Cookie 头不经过 setRequestHeader，XHR/fetch 拦截实际拿不到，最终退回 document.cookie，
@@ -109,23 +113,32 @@
     // 优先用 GM_cookie 获取完整 Cookie（含 HttpOnly）
     if (typeof GM_cookie !== 'undefined' && GM_cookie && typeof GM_cookie.list === 'function') {
       try {
-        GM_cookie.list({ domain: location.hostname }, (cookies, err) => {
-          if (!err && cookies && cookies.length) {
-            const seen = new Set();
-            const parts = [];
-            for (const c of cookies) {
-              if (!c || c.name == null || seen.has(c.name)) continue;
-              seen.add(c.name);
-              parts.push(c.name + '=' + (c.value || ''));
+        // 同时用 url 和 domain 两种方式查询并合并去重：
+        //  - url: 返回浏览器实际会发送到当前页面的 Cookie（最贴近请求头，含父域如 .south-plus.net 的 cf_clearance）
+        //  - domain: 补充 path 受限等情况下 url 查询可能漏掉的 Cookie
+        const queries = [{ url: location.href }, { domain: location.hostname }];
+        let pending = queries.length;
+        const merged = new Map(); // name -> value（先入为主，url 优先）
+        let done = false;
+        queries.forEach((q) => {
+          GM_cookie.list(q, (cookies, err) => {
+            if (!err && cookies) {
+              for (const c of cookies) {
+                if (!c || c.name == null) continue;
+                if (!merged.has(c.name)) merged.set(c.name, c.value || '');
+              }
             }
-            if (parts.length) {
-              const cookieStr = parts.join('; ');
-              copyToClipboard(cookieStr);
-              toast(`✅ 已复制 ${parts.length} 个 Cookie（来源：GM_cookie，含 HttpOnly）`);
-              return;
+            if (!done && --pending === 0) {
+              done = true;
+              if (merged.size) {
+                const cookieStr = Array.from(merged, ([n, v]) => n + '=' + v).join('; ');
+                copyToClipboard(cookieStr);
+                toast(`✅ 已复制 ${merged.size} 个 Cookie（来源：GM_cookie，含 HttpOnly）`);
+              } else {
+                fallbackCopy();
+              }
             }
-          }
-          fallbackCopy();
+          });
         });
         return;
       } catch (_) {

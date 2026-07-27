@@ -28,6 +28,10 @@
 
 ## 📝 更新日志
 
+### v2.1.1
+- 修复 `GM_cookie` 用 `domain` 查询会漏掉父域 Cookie 的问题（如 Cloudflare 的 `cf_clearance`，domain 为 `.south-plus.net`）
+- 改为 `url` + `domain` 双查询合并去重，`url` 查询等价于浏览器实际发送的 Cookie，与请求头一致
+
 ### v2.1.0
 - 改用 `GM_cookie.list` 获取完整 Cookie（含 HttpOnly），修复“只能复制到部分 Cookie”的问题
 - 原因：浏览器自动附加的 Cookie 头不经过 `setRequestHeader`，XHR/fetch 拦截实际拿不到，最终退回 `document.cookie`，而 `document.cookie` 读不到 HttpOnly Cookie
