@@ -27,6 +27,11 @@
 
 ## 📝 更新日志
 
+### v2.2.0
+- 彻底修复漏掉 `cf_clearance` 等父域 Cookie 的问题
+- 原因：Tampermonkey 的 `GM_cookie` 用 `domain` 查询不做子域匹配，`www.south-plus.net` 查不到 `.south-plus.net` 的 cookie；且新版 `GM_cookie.list` 返回 Promise
+- 方案：Promise 兼容 + 超时保护 + 多策略查询合并（全量 / url / hostname / 注册域），覆盖父域与 partitioned 场景
+
 ### v2.1.2
 - 统一使用尘天图标（公共 `assets/icon-128.png`）
 - 简化复制提示，去掉括号内的来源说明

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🍪 Cookie 一键复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      2.1.2
+// @version      2.2.0
 // @description  复制当前网站的完整 Cookie（含 HttpOnly），通过 GM_cookie 获取，document.cookie 兜底
 // @author       liuyunss
 // @match        *://*/*
@@ -17,6 +17,12 @@
 // ==/UserScript==
 
 /**
+ * v2.2.0:
+ * - 彻底修复漏掉 cf_clearance 等父域 Cookie 的问题
+ * - 原因：Tampermonkey 的 GM_cookie 用 domain 查询不做子域匹配，www.south-plus.net 查不到 .south-plus.net 的 cookie；
+ *   且新版 GM_cookie.list 返回 Promise，旧版用回调。cf_clearance 还可能是 partitioned cookie。
+ * - 方案：Promise 兼容 + 超时保护 + 多策略查询合并（全量 / url / hostname / 注册域），覆盖父域与 partitioned 场景
+ *
  * v2.1.2:
  * - 统一使用尘天图标（公共 assets/icon-128.png）
  * - 简化复制提示，去掉括号内的来源说明
@@ -60,11 +66,10 @@
     clearTimeout(_t._x); _t._x = setTimeout(() => _t.classList.remove('show'), 1500);
   }
 
-  /* ── XHR 拦截：捕获匹配当前域名的 Cookie header ── */
+  /* ── XHR 拦截：捕获匹配当前域名的 Cookie header（兜底用） ── */
   let _capturedCookie = '';
   const _origin = location.origin;
 
-  // 追踪每个 XHR 设置的 header
   const _xhrHeaders = new WeakMap();
 
   const _origSetHeader = XMLHttpRequest.prototype.setRequestHeader;
@@ -83,11 +88,9 @@
 
   const _origSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.send = function () {
-    // 只取第一个匹配的，不再覆盖
     if (!_capturedCookie && this._ckClipHeaders && this._ckClipHeaders['cookie']) {
       try {
         const reqUrl = this._ckClipUrl;
-        // 匹配当前域名（相对路径 or 同源绝对路径）
         const isSameOrigin = !reqUrl.startsWith('http') || reqUrl.startsWith(_origin);
         if (isSameOrigin) {
           _capturedCookie = this._ckClipHeaders['cookie'];
@@ -112,42 +115,65 @@
     toast(`✅ 已复制 ${count} 个 Cookie`);
   }
 
+  /* ── GM_cookie 辅助 ── */
+  // Promise 包装：兼容回调与 Promise 两种实现，并加超时保护
+  function gmList(details) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const done = (v) => { if (!settled) { settled = true; resolve(v || []); } };
+      try {
+        const r = GM_cookie.list(details, (cookies, err) => done(err ? [] : cookies));
+        if (r && typeof r.then === 'function') {
+          r.then((c) => done(c), () => done([]));
+        }
+      } catch (_) { done([]); }
+      setTimeout(done, 2000); // 超时兜底，避免卡死
+    });
+  }
+  // 注册域（取最后两段，覆盖绝大多数场景）
+  function registrableDomain(host) {
+    const p = host.split('.');
+    return p.length <= 2 ? host : p.slice(-2).join('.');
+  }
+  // 判断 cookie domain 是否属于当前站点
+  function isCurrentSite(domain) {
+    if (!domain) return false;
+    const d = domain.replace(/^\./, '');
+    const host = location.hostname;
+    return host === d || host.endsWith('.' + d);
+  }
+
   /* ── 复制命令 ── */
-  GM_registerMenuCommand('🍪 复制 Cookie', () => {
-    // 优先用 GM_cookie 获取完整 Cookie（含 HttpOnly）
+  GM_registerMenuCommand('🍪 复制 Cookie', async () => {
     if (typeof GM_cookie !== 'undefined' && GM_cookie && typeof GM_cookie.list === 'function') {
       try {
-        // 同时用 url 和 domain 两种方式查询并合并去重：
-        //  - url: 返回浏览器实际会发送到当前页面的 Cookie（最贴近请求头，含父域如 .south-plus.net 的 cf_clearance）
-        //  - domain: 补充 path 受限等情况下 url 查询可能漏掉的 Cookie
-        const queries = [{ url: location.href }, { domain: location.hostname }];
-        let pending = queries.length;
-        const merged = new Map(); // name -> value（先入为主，url 优先）
-        let done = false;
-        queries.forEach((q) => {
-          GM_cookie.list(q, (cookies, err) => {
-            if (!err && cookies) {
-              for (const c of cookies) {
-                if (!c || c.name == null) continue;
-                if (!merged.has(c.name)) merged.set(c.name, c.value || '');
-              }
-            }
-            if (!done && --pending === 0) {
-              done = true;
-              if (merged.size) {
-                const cookieStr = Array.from(merged, ([n, v]) => n + '=' + v).join('; ');
-                copyToClipboard(cookieStr);
-                toast(`✅ 已复制 ${merged.size} 个 Cookie`);
-              } else {
-                fallbackCopy();
-              }
-            }
+        const host = location.hostname;
+        // 多策略查询合并，确保拿到父域（如 .south-plus.net 的 cf_clearance）和 partitioned cookie：
+        //  - {}                 : 全量，拿所有可访问 cookie（前端按当前站点过滤，覆盖 partitioned 等特殊情况）
+        //  - {url}              : 浏览器实际发送到当前页面的 Cookie，与请求头一致
+        //  - {domain: hostname} : 按主机名
+        //  - {domain: 注册域}   : 按注册域，覆盖父域 cookie（TM 的 domain 查询不做子域匹配，hostname 查不到父域 cookie）
+        const queries = [
+          {},
+          { url: location.href },
+          { domain: host },
+          { domain: registrableDomain(host) },
+        ];
+        const results = await Promise.all(queries.map(gmList));
+        const merged = new Map();
+        results.forEach((cookies, i) => {
+          (cookies || []).forEach((c) => {
+            if (!c || c.name == null) return;
+            if (i === 0 && !isCurrentSite(c.domain)) return; // 全量结果只取当前站点
+            if (!merged.has(c.name)) merged.set(c.name, c.value || '');
           });
         });
-        return;
-      } catch (_) {
-        // GM_cookie 不可用，走兜底
-      }
+        if (merged.size) {
+          copyToClipboard(Array.from(merged, ([n, v]) => n + '=' + v).join('; '));
+          toast(`✅ 已复制 ${merged.size} 个 Cookie`);
+          return;
+        }
+      } catch (_) {}
     }
     fallbackCopy();
   });
