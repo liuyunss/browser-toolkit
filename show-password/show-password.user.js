@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         🔐 密码显示与复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      3.1.0
+// @version      3.1.1
 // @description  在所有网站的密码输入框旁添加显示/隐藏密码和复制密码按钮，支持鼠标悬停预览
 // @author       liuyunss
 // @match        *://*/*
-// @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/show-password/assets/icon-128.png
+// @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/assets/icon-128.png
 // @grant        GM_setClipboard
 // @grant        GM_getValue
 // @grant        GM_setValue

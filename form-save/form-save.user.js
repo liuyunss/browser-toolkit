@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         💾 FormSave - 表单自动保存
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.0.0
+// @version      1.0.1
 // @description  自动保存表单内容，刷新后一键恢复，防止填写丢失
 // @author       liuyunss
 // @match        *://*/*
+// @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/assets/icon-128.png
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand

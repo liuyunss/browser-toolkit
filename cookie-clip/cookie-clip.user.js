@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         🍪 Cookie 一键复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      2.1.1
+// @version      2.1.2
 // @description  复制当前网站的完整 Cookie（含 HttpOnly），通过 GM_cookie 获取，document.cookie 兜底
 // @author       liuyunss
 // @match        *://*/*
+// @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/assets/icon-128.png
 // @noframes
 // @grant        GM_setClipboard
 // @grant        GM_registerMenuCommand
@@ -16,6 +17,10 @@
 // ==/UserScript==
 
 /**
+ * v2.1.2:
+ * - 统一使用尘天图标（公共 assets/icon-128.png）
+ * - 简化复制提示，去掉括号内的来源说明
+ *
  * v2.1.1:
  * - 修复 GM_cookie 用 domain 查询会漏掉父域 Cookie（如 Cloudflare 的 cf_clearance，domain=.south-plus.net）的问题
  * - 改为 url + domain 双查询合并去重，url 查询等价于浏览器实际发送的 Cookie，与请求头一致
@@ -104,8 +109,7 @@
     if (!cookie) { toast('⚠️ 当前网站没有 Cookie'); return; }
     copyToClipboard(cookie);
     const count = cookie.split(';').filter(s => s.trim()).length;
-    const source = _capturedCookie ? '请求头' : 'document.cookie（可能不含 HttpOnly）';
-    toast(`✅ 已复制 ${count} 个 Cookie（来源：${source}）`);
+    toast(`✅ 已复制 ${count} 个 Cookie`);
   }
 
   /* ── 复制命令 ── */
@@ -133,7 +137,7 @@
               if (merged.size) {
                 const cookieStr = Array.from(merged, ([n, v]) => n + '=' + v).join('; ');
                 copyToClipboard(cookieStr);
-                toast(`✅ 已复制 ${merged.size} 个 Cookie（来源：GM_cookie，含 HttpOnly）`);
+                toast(`✅ 已复制 ${merged.size} 个 Cookie`);
               } else {
                 fallbackCopy();
               }

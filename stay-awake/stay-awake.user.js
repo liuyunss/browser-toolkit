@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         🔒 StayAwake - 页面保活
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.1.0
+// @version      1.1.1
 // @description  防止网页因闲置超时退出登录，支持指定网站生效，自动识别当前域名
 // @author       liuyunss
 // @match        *://*/*
+// @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/assets/icon-128.png
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand

@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         🧲 磁力链接预览
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.3.0
+// @version      1.3.1
 // @description  高亮磁力链接，点击弹窗预览文件列表与截图，支持一键复制
 // @author       liuyunss
 // @match        *://*/*
-// @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/magnet-preview/assets/icon-128.png
+// @icon         https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/assets/icon-128.png
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @connect      whatslink.info

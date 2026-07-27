@@ -7,7 +7,6 @@
 - **完整 Cookie** — 通过 `GM_cookie` 读取 Cookie（含 HttpOnly），与 F12 Network 请求头一致
 - **兜底机制** — `GM_cookie` 不可用时降级为 `document.cookie`（不含 HttpOnly）
 - **数量提示** — 复制后显示复制了多少个 Cookie
-- **来源提示** — 显示 Cookie 来源（GM_cookie / document.cookie）
 
 ## 📥 安装
 
@@ -27,6 +26,10 @@
 - 不存储任何数据
 
 ## 📝 更新日志
+
+### v2.1.2
+- 统一使用尘天图标（公共 `assets/icon-128.png`）
+- 简化复制提示，去掉括号内的来源说明
 
 ### v2.1.1
 - 修复 `GM_cookie` 用 `domain` 查询会漏掉父域 Cookie 的问题（如 Cloudflare 的 `cf_clearance`，domain 为 `.south-plus.net`）
