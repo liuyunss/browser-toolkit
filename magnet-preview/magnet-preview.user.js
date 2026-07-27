@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🧲 磁力链接预览
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.3.1
+// @version      1.4.0
 // @description  高亮磁力链接，点击弹窗预览文件列表与截图，支持一键复制
 // @author       liuyunss
 // @match        *://*/*
@@ -17,6 +17,12 @@
 // @license      MIT
 // ==/UserScript==
 
+/**
+ * v1.4.0:
+ * - 链接旁的预览按钮改为图标按钮（眼睛图标），去掉“预览”文字
+ * - 预览按钮后新增复制按钮（复制图标），一键复制磁力链接
+ */
+
 (function(){
 'use strict';
 const RE=/magnet:\?[^\s<>"'`]+/gi;
@@ -25,6 +31,11 @@ const H=m=>(m.match(/btih:([0-9a-fA-F]{40})/)||[])[1]?.toLowerCase();
 const E=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML;};
 const F=b=>{if(!b)return'';const u=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(1024));return(b/Math.pow(1024,i)).toFixed(i?1:0)+' '+u[i];};
 const I=n=>({mp4:'🎬',mkv:'🎬',avi:'🎬',mov:'🎬',webm:'🎬',jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',webp:'🖼',mp3:'🎵',flac:'🎵',wav:'🎵',zip:'📦',rar:'📦','7z':'📦',tar:'📦',gz:'📦',srt:'📝',ass:'📝',sub:'📝',txt:'📝',nfo:'📝'})[(n||'').split('.').pop()]||'📄';
+
+const SVG={
+eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
+};
 
 const GM=(u,o={})=>new Promise((ok,no)=>GM_xmlhttpRequest({method:'GET',url:u,timeout:o.t||8000,responseType:o.b?'arraybuffer':'',onload:r=>{try{ok(o.b?r.response:JSON.parse(r.responseText))}catch(e){no(e)}},onerror:()=>no(Error('fail')),ontimeout:()=>no(Error('timeout'))}));
 
@@ -47,6 +58,8 @@ return{name:nm,files:fs,total:fs.reduce((s,f)=>s+f.size,0)};}catch(e){return nul
 // ═══ UI ═══
 function toast(msg,err){const t=document.createElement('div');t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:10px 28px;border-radius:10px;font-size:13px;font-weight:600;z-index:2147483647;color:#fff;background:'+(err?'#dc2626':'#22c55e')+';animation:mp-toast .25s ease,mp-toast 2.3s .25s reverse forwards';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2800);}
 
+function copyMagnet(m){navigator.clipboard.writeText(m).then(()=>toast('已复制'),()=>toast('复制失败',1));}
+
 function render(d){
 let h='<div class="mp-info">';
 if(d.size)h+='<span>📀 '+F(d.size)+'</span>';
@@ -67,7 +80,7 @@ document.body.appendChild(ov);
 const body=ov.querySelector('.mp-body'),title=ov.querySelector('.mp-hd-title'),cp=ov.querySelector('.mp-btn-copy'),spin=ov.querySelector('.mp-spin');
 const close=()=>ov.remove();ov.querySelector('.mp-close').onclick=close;ov.onclick=e=>{if(e.target===ov)close();};
 document.addEventListener('keydown',function esc(e){if(e.key==='Escape'){close();document.removeEventListener('keydown',esc);}});
-cp.onclick=()=>navigator.clipboard.writeText(magnet).then(()=>toast('已复制'),()=>toast('复制失败',1));
+cp.onclick=()=>copyMagnet(magnet);
 
 const h=H(magnet);
 const R={name:'',size:0,count:0,type:'',shots:[],files:[],src:[]};
@@ -110,7 +123,7 @@ function links(root){
 if(root.querySelectorAll)root.querySelectorAll('a[href^="magnet:"]').forEach(a=>{a.classList.add('mp-highlight');if(!a.dataset.mb){a.dataset.mb='1';a.insertAdjacentElement('afterend',btn(a));}});
 if(root.tagName==='A'&&root.href?.startsWith('magnet:')){root.classList.add('mp-highlight');if(!root.dataset.mb){root.dataset.mb='1';root.insertAdjacentElement('afterend',btn(root));}}}
 
-function btn(a){const b=document.createElement('span');b.className='mp-preview-btn';b.textContent='🧲 预览';b.onclick=e=>{e.preventDefault();e.stopPropagation();preview(a.href);};return b;}
+function btn(a){const g=document.createElement('span');g.className='mp-btn-group';const pv=document.createElement('span');pv.className='mp-icon-btn';pv.title='预览磁力链接';pv.innerHTML=SVG.eye;pv.onclick=e=>{e.preventDefault();e.stopPropagation();preview(a.href);};const cp=document.createElement('span');cp.className='mp-icon-btn';cp.title='复制磁力链接';cp.innerHTML=SVG.copy;cp.onclick=e=>{e.preventDefault();e.stopPropagation();copyMagnet(a.href);};g.appendChild(pv);g.appendChild(cp);return g;}
 
 function inputs(root){
 if(!root.querySelectorAll)return;
@@ -123,7 +136,10 @@ scan(document);
 new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===Node.ELEMENT_NODE&&!n.closest?.('.mp-overlay')&&!n.closest?.('.mp-img-ov'))scan(n);}).observe(document.body||document.documentElement,{childList:true,subtree:true});
 
 GM_addStyle(`
-.mp-preview-btn{display:inline-block;margin-left:6px;padding:2px 10px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;border-radius:12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;user-select:none;vertical-align:middle;line-height:1.6;box-shadow:0 1px 3px rgba(22,163,74,.25);transition:transform .15s}.mp-preview-btn:hover{transform:translateY(-1px);background:linear-gradient(135deg,#15803d,#16a34a)}
+.mp-btn-group{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}
+.mp-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(22,163,74,.25);transition:transform .15s,background .15s;user-select:none}
+.mp-icon-btn:hover{transform:translateY(-1px);background:linear-gradient(135deg,#15803d,#16a34a)}
+.mp-icon-btn svg{width:13px;height:13px}
 .mp-input-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-left:5px;background:#16a34a;color:#fff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;vertical-align:middle;user-select:none}.mp-input-btn:hover{opacity:.85}
 a[href^="magnet:"],.mp-highlight{color:#16a34a!important;background:rgba(22,163,74,.06)!important;padding:1px 5px!important;border-radius:4px!important;border:1px solid rgba(22,163,74,.2)!important;text-decoration:none!important;font-weight:500!important;cursor:pointer!important}.mp-highlight:hover,a[href^="magnet:"]:hover{background:rgba(22,163,74,.12)!important;border-color:rgba(22,163,74,.4)!important}
 .mp-overlay,.mp-img-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:mp-fade .2s ease}
