@@ -4,11 +4,10 @@
 
 ## ✨ 功能
 
-- **完整 Cookie** — 拦截 XHR/fetch 请求，获取请求头中的 Cookie（含 HttpOnly）
-- **匹配当前域名** — 只取同源请求的 Cookie，不会误抓其他域名
-- **兜底机制** — 无 XHR 请求时自动降级为 `document.cookie`
+- **完整 Cookie** — 通过 `GM_cookie` 读取 Cookie（含 HttpOnly），与 F12 Network 请求头一致
+- **兜底机制** — `GM_cookie` 不可用时降级为 `document.cookie`（不含 HttpOnly）
 - **数量提示** — 复制后显示复制了多少个 Cookie
-- **来源提示** — 显示 Cookie 来源（请求头 / document.cookie）
+- **来源提示** — 显示 Cookie 来源（GM_cookie / document.cookie）
 
 ## 📥 安装
 
@@ -23,11 +22,16 @@
 
 ## 🔒 安全
 
-- 仅捕获匹配当前域名的请求 Cookie，不跨域
+- 只读取当前域名的 Cookie，不跨域
 - 不上传任何服务器
 - 不存储任何数据
 
 ## 📝 更新日志
+
+### v2.1.0
+- 改用 `GM_cookie.list` 获取完整 Cookie（含 HttpOnly），修复“只能复制到部分 Cookie”的问题
+- 原因：浏览器自动附加的 Cookie 头不经过 `setRequestHeader`，XHR/fetch 拦截实际拿不到，最终退回 `document.cookie`，而 `document.cookie` 读不到 HttpOnly Cookie
+- 保留 `document.cookie` 兜底（`GM_cookie` 不可用时使用）
 
 ### v2.0.0
 - 从 `document.cookie` 改为拦截 XHR 请求，获取完整 Cookie（含 HttpOnly）

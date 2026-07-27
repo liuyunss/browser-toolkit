@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         🍪 Cookie 一键复制
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      2.0.0
-// @description  复制当前网站的完整 Cookie（含 HttpOnly），拦截 XHR 请求获取请求头中的 Cookie
+// @version      2.1.0
+// @description  复制当前网站的完整 Cookie（含 HttpOnly），通过 GM_cookie 获取，document.cookie 兜底
 // @author       liuyunss
 // @match        *://*/*
 // @noframes
 // @grant        GM_setClipboard
 // @grant        GM_registerMenuCommand
+// @grant        GM_cookie
 // @run-at       document-start
 // @updateURL    https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/cookie-clip/cookie-clip.user.js
 // @downloadURL  https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/cookie-clip/cookie-clip.user.js
@@ -15,6 +16,12 @@
 // ==/UserScript==
 
 /**
+ * v2.1.0:
+ * - 改用 GM_cookie.list 获取完整 Cookie（含 HttpOnly），修复“只能复制到部分 Cookie”的问题
+ *   原因：浏览器自动附加的 Cookie 头不经过 setRequestHeader，XHR/fetch 拦截实际拿不到，最终退回 document.cookie，
+ *   而 document.cookie 读不到 HttpOnly Cookie，导致大量 Cookie 丢失。
+ * - 保留 XHR/fetch 拦截与 document.cookie 作为兜底（GM_cookie 不可用时使用）
+ *
  * v2.0.0:
  * - 从 document.cookie 改为拦截 XHR 请求，捕获请求头中的完整 Cookie（含 HttpOnly）
  * - 只取匹配当前域名的请求，一个就够
@@ -81,16 +88,51 @@
     return _origSend.apply(this, arguments);
   };
 
-  /* ── 复制命令 ── */
-  GM_registerMenuCommand('🍪 复制 Cookie', () => {
-    // 优先用拦截到的完整 Cookie，兜底用 document.cookie
+  /* ── 复制到剪贴板 ── */
+  function copyToClipboard(text) {
+    if (typeof GM_setClipboard === 'function') GM_setClipboard(text, 'text');
+    else navigator.clipboard.writeText(text).catch(() => {});
+  }
+
+  /* ── 兜底：用拦截到的 Cookie 或 document.cookie ── */
+  function fallbackCopy() {
     const cookie = _capturedCookie || document.cookie;
     if (!cookie) { toast('⚠️ 当前网站没有 Cookie'); return; }
-    if (typeof GM_setClipboard === 'function') GM_setClipboard(cookie, 'text');
-    else navigator.clipboard.writeText(cookie).catch(() => {});
-    const count = cookie.split(';').length;
+    copyToClipboard(cookie);
+    const count = cookie.split(';').filter(s => s.trim()).length;
     const source = _capturedCookie ? '请求头' : 'document.cookie（可能不含 HttpOnly）';
     toast(`✅ 已复制 ${count} 个 Cookie（来源：${source}）`);
+  }
+
+  /* ── 复制命令 ── */
+  GM_registerMenuCommand('🍪 复制 Cookie', () => {
+    // 优先用 GM_cookie 获取完整 Cookie（含 HttpOnly）
+    if (typeof GM_cookie !== 'undefined' && GM_cookie && typeof GM_cookie.list === 'function') {
+      try {
+        GM_cookie.list({ domain: location.hostname }, (cookies, err) => {
+          if (!err && cookies && cookies.length) {
+            const seen = new Set();
+            const parts = [];
+            for (const c of cookies) {
+              if (!c || c.name == null || seen.has(c.name)) continue;
+              seen.add(c.name);
+              parts.push(c.name + '=' + (c.value || ''));
+            }
+            if (parts.length) {
+              const cookieStr = parts.join('; ');
+              copyToClipboard(cookieStr);
+              toast(`✅ 已复制 ${parts.length} 个 Cookie（来源：GM_cookie，含 HttpOnly）`);
+              return;
+            }
+          }
+          fallbackCopy();
+        });
+        return;
+      } catch (_) {
+        // GM_cookie 不可用，走兜底
+      }
+    }
+    fallbackCopy();
   });
 
   /* ── 拦截 fetch（补充方案） ── */
