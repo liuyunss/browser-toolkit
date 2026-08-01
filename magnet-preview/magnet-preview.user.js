@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🧲 磁力链接预览
 // @namespace    https://github.com/liuyunss/browser-toolkit
-// @version      1.4.0
+// @version      1.4.1
 // @description  高亮磁力链接，点击弹窗预览文件列表与截图，支持一键复制
 // @author       liuyunss
 // @match        *://*/*
@@ -11,6 +11,7 @@
 // @connect      whatslink.info
 // @connect      itorrents.org
 // @connect      btdig.com
+// @connect      torrentapi.org
 // @run-at       document-idle
 // @updateURL    https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/magnet-preview/magnet-preview.user.js
 // @downloadURL  https://raw.githubusercontent.com/liuyunss/browser-toolkit/main/magnet-preview/magnet-preview.user.js
@@ -18,14 +19,17 @@
 // ==/UserScript==
 
 /**
- * v1.4.0:
- * - 链接旁的预览按钮改为图标按钮（眼睛图标），去掉“预览”文字
- * - 预览按钮后新增复制按钮（复制图标），一键复制磁力链接
+ * v1.4.1:
+ * - 修复：多种子文本节点中因正则 lastIndex 污染导致“隔一个处理一个”的问题
+ * - 修复：预览截图先显示后消失的问题（改为直接给 img 赋值，错误时样式降级而非隐藏）
+ * - 增强：新增 torrentapi.org 作为文件列表的第三兜底数据源，提升文件列表展示成功率
  */
 
 (function(){
 'use strict';
 const RE=/magnet:\?[^\s<>"'`]+/gi;
+// 独立正则用于“是否包含”判断，避免污染 RE.lastIndex（RE 带 g 标志，test/exec 共享 lastIndex）
+const HAS=/magnet:\?[^\s<>"'`]+/i;
 const SKIP=new Set(['SCRIPT','STYLE','TEXTAREA','INPUT','A','NOSCRIPT','SVG','CODE','PRE']);
 const H=m=>(m.match(/btih:([0-9a-fA-F]{40})/)||[])[1]?.toLowerCase();
 const E=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML;};
@@ -42,6 +46,7 @@ const GM=(u,o={})=>new Promise((ok,no)=>GM_xmlhttpRequest({method:'GET',url:u,ti
 function WL(m){return GM('https://whatslink.info/api/v1/link?url='+encodeURIComponent(m)).then(d=>{if(d.error)throw Error(d.error);return{name:d.name,size:d.size,count:d.count,type:d.file_type,shots:(d.screenshots||[]).map(s=>s.screenshot)};}).catch(()=>null);}
 function IT(h){return GM('https://itorrents.org/torrent/'+h.toUpperCase()+'.torrent',{t:10000,b:true}).then(raw=>{const info=PT(new Uint8Array(raw));if(!info)throw Error('parse');return{name:info.name,files:info.files,total:info.total};}).catch(()=>null);}
 function BD(h){return GM('https://btdig.com/'+h,{t:12000}).then(html=>{if(typeof html!=='string')html=new TextDecoder().decode(html);const nm=(html.match(/<title>([^<]+)/)||[])[1]?.replace(/\s*-\s*BTDigg.*/,'').trim()||'';const fs=[],ir=/class="fa fa-([^"]+)"[^>]*>\s*([^<]+)/g;let m;while((m=ir.exec(html))!==null){if(m[1]==='folder-open'||m[1]==='plus-circle')continue;const r=m[2].replace(/&nbsp;/g,' ').trim();if(r&&!r.startsWith('<'))fs.push({name:r,size:0});}const sz=[],sr=/([\d.]+)\s*(KB|MB|GB|bytes)/gi;while((m=sr.exec(html))!==null){const v=parseFloat(m[1]);sz.push(m[2]==='GB'?v*1073741824:m[2]==='MB'?v*1048576:m[2]==='KB'?v*1024:v);}for(let i=0;i<Math.min(fs.length,sz.length);i++)fs[i].size=sz[i];return{name:nm,files:fs.length?fs:null};}).catch(()=>null);}
+function TA(h){return GM('https://torrentapi.org/pubapi_v2.php?app_id=magnetpreview&get_files=1&hash='+h,{t:12000}).then(d=>{if(!d||d.error||!Array.isArray(d.files))throw Error(d&&d.error||'no');return{name:'',files:d.files.map(f=>({name:f.path||f.name,size:+f.length||0}))};}).catch(()=>null);}
 
 function PT(d){let p=0;const r=n=>{const v=d.slice(p,p+n);p+=n;return v;},k=()=>d[p];
 function parse(){const c=k();
@@ -86,7 +91,8 @@ const h=H(magnet);
 const R={name:'',size:0,count:0,type:'',shots:[],files:[],src:[]};
 const tasks=[WL(magnet).then(d=>{if(d){Object.assign(R,{name:d.name,size:d.size,count:d.count,type:d.type,shots:d.shots});R.src.push('whatslink');}})];
 if(h){tasks.push(IT(h).then(d=>{if(d){R.name=R.name||d.name;R.files=d.files;R.count=R.files.length||R.count;if(!R.size)R.size=d.total;R.src.push('itorrents');}}));
-tasks.push(BD(h).then(d=>{if(d&&!R.files.length&&d.files){R.files=d.files;R.src.push('btdig');}}));}
+tasks.push(BD(h).then(d=>{if(d&&!R.files.length&&d.files){R.files=d.files;R.src.push('btdig');}}));
+tasks.push(TA(h).then(d=>{if(d&&!R.files.length&&d.files.length){R.files=d.files;R.count=R.files.length||R.count;R.src.push('torrentapi');}}));}
 
 Promise.all(tasks).then(()=>{
 spin.style.display='none';cp.style.display='';
@@ -95,7 +101,7 @@ else{body.innerHTML='<div class="mp-empty">未能获取种子信息</div>';}
 });
 }
 
-function lazyLoad(root){root.querySelectorAll('.mp-shot[data-src]').forEach(img=>{const s=img.dataset.src;const r=new Image();r.onload=()=>{img.src=s;img.classList.add('mp-loaded');};r.onerror=()=>{img.style.display='none';};r.src=s;});}
+function lazyLoad(root){root.querySelectorAll('.mp-shot[data-src]').forEach(img=>{const s=img.dataset.src;img.dataset.src='';img.src=s;img.onload=()=>img.classList.add('mp-loaded');img.onerror=()=>img.classList.add('mp-broken');});}
 
 // ═══ 截图大图 ═══
 document.addEventListener('click',e=>{
@@ -113,7 +119,7 @@ document.addEventListener('keydown',function esc(e){if(e.key==='Escape'){ov.remo
 function skip(el){let p=el;while(p){if(SKIP.has(p.tagName)||p.classList?.contains('mp-highlight'))return true;p=p.parentElement;}return false;}
 
 function textNodes(root){
-const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>skip(n.parentElement)||!RE.test(n.textContent)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>skip(n.parentElement)||!HAS.test(n.textContent)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
 const ns=[];while(w.nextNode())ns.push(w.currentNode);
 for(const n of ns){const p=n.parentNode;if(!p)continue;const t=n.textContent,f=document.createDocumentFragment();let l=0,m;RE.lastIndex=0;
 while((m=RE.exec(t))!==null){if(m.index>l)f.appendChild(document.createTextNode(t.slice(l,m.index)));const a=document.createElement('a');a.href=m[0];a.textContent=m[0].length>80?m[0].slice(0,77)+'…':m[0];a.className='mp-highlight';a.target='_blank';f.appendChild(a);f.appendChild(btn(a));l=m.index+m[0].length;}
@@ -165,6 +171,6 @@ a[href^="magnet:"],.mp-highlight{color:#16a34a!important;background:rgba(22,163,
 .mp-file>:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#334155}
 .mp-file>:last-child{color:#94a3b8;font-size:11px;flex-shrink:0}
 .mp-shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
-.mp-shot{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;cursor:pointer;opacity:.5;transition:opacity .3s;background:#f1f5f9}.mp-shot.mp-loaded{opacity:1}
+.mp-shot{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;cursor:pointer;background:#f1f5f9;min-height:90px}.mp-shot.mp-loaded{animation:mp-fade .25s ease}.mp-shot.mp-broken{opacity:.35;position:relative}.mp-shot.mp-broken::after{content:'预览图加载失败';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#94a3b8}
 `.trim());
 })();
